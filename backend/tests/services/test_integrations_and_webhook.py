@@ -75,6 +75,22 @@ async def test_outbound_retries_then_fails(monkeypatch):
     assert len(calls) == 3
 
 
+async def test_outbound_4xx_fails_fast_with_reason(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(401, json={"error": "invalid api key for +919800000002"})
+
+    _patch_httpx(monkeypatch, handler)
+    s = SETTINGS.model_copy(update={"outbound_retries": 2})
+    with pytest.raises(IntegrationNotConfigured) as e:
+        await sarvam_calls.SarvamCallPlacer(s).place_call("+919800000002", "family_alert", {})
+    assert len(calls) == 1  # a rejected request is not retried
+    assert "HTTP 401" in e.value.message and "invalid api key" in e.value.message
+    assert "9800000002" not in e.value.message  # phone masked
+
+
 async def test_llm_request_is_strict_structured_output(monkeypatch):
     seen = {}
     content = {"facts": [], "dismissal_detected": False, "needs_clarification": []}

@@ -360,3 +360,29 @@ def test_timeline_entries_carry_the_rules_they_triggered(client):
     mine = [e for e in tl if e["interaction_id"] == "int_rules"]
     assert any(e["rule_ids"] == ["M-BLEED-01"] for e in mine)
     assert all(e["rule_ids"] == [] for e in tl if e["interaction_id"] != "int_rules" or e["code"] is None)
+
+
+def test_failing_family_call_never_delays_or_breaks_the_live_reply(client, monkeypatch):
+    from app.core.config import get_settings
+    from app.core.errors import IntegrationNotConfigured
+
+    async def down(*_a, **_k):
+        raise IntegrationNotConfigured("outbound call failed: 401")
+
+    monkeypatch.setattr(get_settings(), "family_contact", "call")
+    monkeypatch.setattr(get_integrations().call_placer, "place_call", down)
+    r = assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_down")
+    assert r["level"] == "red" and r["say_verbatim"] and r["ticket_id"]  # Jodi still gets her script
+    lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
+    assert any("family alert call failed" in h["note"] for h in lak["history"])  # logged after the reply
+
+
+def test_amber_does_not_phone_the_family(client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "family_contact", "call")
+    placed = get_integrations().call_placer.placed
+    n = len(placed)
+    r = assess(client, "User: 4 pads soaked since morning", "int_amber")
+    assert r["level"] == "amber"
+    assert not any(p[1] == "family_alert" for p in placed[n:])

@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from functools import partial
 
 from sqlmodel import Session, select
 
+from app.core import deferred
 from app.core.config import get_settings
 from app.core.errors import DomainError
 from app.core.logging import log, mask_phone
 from app.db.models import AshaTask, Mother, Ticket, TicketEvent
+from app.db.session import new_session
 from app.domain import escalation
 from app.domain.rules import Assessment as RuleAssessment
 from app.domain.rules import level_rank, max_level
@@ -75,18 +78,42 @@ async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, li
     chain = escalation.escalation_chain(
         [(f.phone, f.decision_maker) for f in mrepo.family_of(s, mother.id)], mother.asha_id
     )
-    first_family = next((c for c in chain if c.startswith("+")), None)
-    if first_family:
-        await _notify_contact(s, t, mother, first_family, now, live)
+    # Only red phones the family straight away; amber goes to Telegram + the ASHA visit task
+    # (an unacknowledged amber ticket still escalates to the family later, see escalation_tick).
+    first_family = next((c for c in chain if c.startswith("+")), None) if t.level == "red" else None
     if mother.asha_id:
         await _notify_contact(s, t, mother, f"asha:{mother.asha_id}", now, live)
     escalation.check_transition("open", "notified")
     t.state = "notified"
     add_event(s, t, "notified", now)
     log(logger, "ticket opened", ticket_id=t.id, risk_level=t.level, rule_ids=t.rule_ids)
-    # Telegram is extra, sent only after the phone call / transfer / ASHA alert above.
-    await telegram_alerts.notify_ticket(s, t, mother, now, "open")
+    s.commit()
+    job = partial(_contact_family_then_telegram, t.id, mother.id, first_family, now, live)
+    if not deferred.defer(job):  # inside a live tool call: runs right after Jodi gets her answer
+        await _contact_family(s, t, mother, first_family, now, live)
     return t
+
+
+async def _contact_family(s: Session, t: Ticket, mother: Mother, contact: str | None, now: datetime,
+                          live: bool) -> None:  # fmt: skip
+    """Phone call (or transfer note) first; Telegram is extra and always comes after it."""
+    if contact:
+        await _notify_contact(s, t, mother, contact, now, live)
+        s.commit()
+    await telegram_alerts.notify_ticket(s, t, mother, now, "open")
+    s.commit()
+
+
+async def _contact_family_then_telegram(ticket_id: str, mother_id: str, contact: str | None, now: datetime,
+                                        live: bool) -> None:  # fmt: skip
+    """Background version (own DB session): failures are logged, never raised."""
+    try:
+        with new_session() as s:
+            t, mother = s.get(Ticket, ticket_id), mrepo.get_mother(s, mother_id)
+            if t is not None:
+                await _contact_family(s, t, mother, contact, now, live)
+    except Exception as exc:  # noqa: BLE001 - a background job must never crash the app
+        log(logger, "family contact failed", logging.ERROR, ticket_id=ticket_id, error=type(exc).__name__)
 
 
 def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> bool:
@@ -101,6 +128,17 @@ def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> bool:
         t.next_escalation_at = escalation.next_escalation_after_update(t.next_escalation_at, t.level, now)
         add_event(s, t, t.state, now, note=f"raised to {t.level}")
     return raised
+
+
+async def _telegram_raised(ticket_id: str, mother_id: str, now: datetime) -> None:
+    try:
+        with new_session() as s:
+            t = s.get(Ticket, ticket_id)
+            if t is not None:
+                await telegram_alerts.notify_ticket(s, t, mrepo.get_mother(s, mother_id), now, "raised")
+                s.commit()
+    except Exception as exc:  # noqa: BLE001
+        log(logger, "telegram raised alert failed", logging.ERROR, ticket_id=ticket_id, error=type(exc).__name__)
 
 
 def mark_dismissed(s: Session, t: Ticket, now: datetime, by: str = "family") -> None:
@@ -129,7 +167,9 @@ async def apply_assessment(s: Session, mother: Mother, a: RuleAssessment, now: d
                 mark_dismissed(s, t, now)
             if raised:
                 s.commit()
-                await telegram_alerts.notify_ticket(s, t, mother, now, "raised")
+                job = partial(_telegram_raised, t.id, mother.id, now)
+                if not deferred.defer(job):
+                    await telegram_alerts.notify_ticket(s, t, mother, now, "raised")
     if a.asha_task:
         _asha_task(s, mother, "2 calls unanswered: please visit", now, t.id if t else None)
     s.commit()

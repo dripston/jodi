@@ -23,7 +23,7 @@ import httpx
 
 from app.core.config import Settings
 from app.core.errors import IntegrationNotConfigured
-from app.core.logging import log, mask_phone
+from app.core.logging import log, mask_phone, mask_text
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class SarvamCallPlacer:
     def _url(self) -> str:
         s = self._s
         required = {
-            "SARVAM_API_KEY": s.sarvam_api_key,
+            "SARVAM_AGENTS_API_KEY": s.sarvam_agents_api_key or s.sarvam_api_key,
             "SARVAM_ORG_ID": s.sarvam_org_id,
             "SARVAM_WORKSPACE_ID": s.sarvam_workspace_id,
             "SARVAM_AGENT_ID": s.sarvam_agent_id,
@@ -103,7 +103,8 @@ class SarvamCallPlacer:
     async def place_call(self, phone: str, purpose: str, variables: dict[str, str]) -> PlacedCall:
         url = self._url()
         body = build_body(self._s, phone, variables)
-        headers = {"X-API-Key": self._s.sarvam_api_key, "Content-Type": "application/json"}
+        key = self._s.sarvam_agents_api_key or self._s.sarvam_api_key
+        headers = {"X-API-Key": key, "Content-Type": "application/json"}
         last: Exception | None = None
         for attempt in range(self._s.outbound_retries + 1):
             try:
@@ -114,8 +115,18 @@ class SarvamCallPlacer:
                 attempt_id = str(data.get("attempt_id") or f"sarvam_{uuid.uuid4().hex[:10]}")
                 log(logger, "outbound call placed", phone=mask_phone(phone), purpose=purpose)
                 return PlacedCall(attempt_id)
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                reason = mask_text(exc.response.text[:300])
+                last = IntegrationNotConfigured(f"outbound call failed: HTTP {status}: {reason}")
+                log(logger, "outbound call failed", logging.WARNING, attempt=attempt, status=status, reason=reason)
+                if 400 <= status < 500 and status not in (408, 429):
+                    break  # our request is wrong (key, ids, body): retrying cannot help
+                await asyncio.sleep(0.5 * (attempt + 1))
             except (httpx.HTTPError, ValueError) as exc:
                 last = exc
                 log(logger, "outbound call failed", logging.WARNING, attempt=attempt, error=type(exc).__name__)
                 await asyncio.sleep(0.5 * (attempt + 1))
+        if isinstance(last, IntegrationNotConfigured):
+            raise last
         raise IntegrationNotConfigured(f"outbound call failed: {last}")

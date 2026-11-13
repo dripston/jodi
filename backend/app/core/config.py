@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     )
 
     sarvam_api_key: str = ""
+    # Voice Agents API key (indus.sarvam.ai → Settings → API Key) for placing calls. The platform
+    # `sk_` key above is rejected there ("Invalid API key format"). Empty = fall back to SARVAM_API_KEY.
+    sarvam_agents_api_key: str = ""
     sarvam_org_id: str = ""
     sarvam_workspace_id: str = ""
     sarvam_agent_id: str = ""
