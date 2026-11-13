@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import logging
 import secrets
+import string
 from datetime import datetime, timedelta
 
 from sqlmodel import Session, col, select
@@ -45,6 +46,14 @@ class ShareDenied(DomainError):
 
 def _hash(token: str, secret: str) -> str:
     return hashlib.sha256(f"{token}:{secret}".encode()).hexdigest()
+
+
+def _new_token() -> str:
+    """Letters and digits only: chat apps and copy-paste mangle "_" and "-" in links (a dropped "_" broke a demo)."""
+    return "".join(secrets.choice(_TOKEN_CHARS) for _ in range(40))
+
+
+_TOKEN_CHARS = string.ascii_letters + string.digits
 
 
 def _new_otp() -> str:
@@ -83,7 +92,7 @@ async def create(s: Session, mother_id: str, by: str, now: datetime, ticket_id: 
     mother = mrepo.get_mother(s, mother_id)
     for old in s.exec(select(ShareGrant).where(ShareGrant.mother_id == mother_id, ShareGrant.revoked == False)):  # noqa: E712
         old.revoked = True
-    token, otp = secrets.token_urlsafe(32), _new_otp()
+    token, otp = _new_token(), _new_otp()
     g = ShareGrant(token=token, mother_id=mother_id, ticket_id=ticket_id, created_by=by, created_at=now,
                    expires_at=now + LINK_TTL, otp_hash=_hash(token, otp), otp_expires_at=now + OTP_TTL,
                    otp_sends=1)  # fmt: skip

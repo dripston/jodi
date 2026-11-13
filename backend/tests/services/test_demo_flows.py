@@ -530,3 +530,11 @@ def test_call_conversation_is_written_to_a_backend_log_file(client, tmp_path, mo
     assert "Jodi: ಜ್ವರ ಇದೆಯಾ?" in text and "(Any fever?)" in text
     assert "Lakshmi: naalku batte" in text and "Level: AMBER" in text
     assert "--- Recorded in her health record ---" in text and "+919800000001" not in text  # phone masked
+
+
+
+def test_share_tokens_are_letters_and_digits_only():
+    from app.services.share_service import _new_token
+
+    toks = {_new_token() for _ in range(200)}
+    assert len(toks) == 200 and all(t.isalnum() and t.isascii() and len(t) == 40 for t in toks)
