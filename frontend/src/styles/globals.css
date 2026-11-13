@@ -1,0 +1,46 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  html.projector {
+    font-size: 18px;
+  }
+  body {
+    @apply bg-bg font-sans text-body text-text;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--brand-soft);
+  }
+  [lang='kn'] {
+    @apply font-kannada;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-entry-in,
+  .animate-slide-in-right {
+    animation: fade-in 240ms linear !important;
+  }
+  .animate-ring-pulse {
+    animation: none !important;
+  }
+}
