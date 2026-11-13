@@ -24,6 +24,14 @@ class Lenient(BaseModel):
             return f"anon_{uuid.uuid4().hex[:10]}"
         return v
 
+    @field_validator("phone", "caller_phone", "mother_phone", mode="before", check_fields=False)
+    @classmethod
+    def _phone(cls, v: Any) -> Any:
+        """Dashboard 'Send' tests send User identifier = null: treat as an unknown caller."""
+        if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
+            return ""
+        return v
+
 
 # ------------------------------------------------------------------ core models
 class FamilyPhone(BaseModel):
@@ -279,7 +287,7 @@ class AssessRiskOut(BaseModel):
 
 
 class ReadSummaryIn(Lenient):
-    caller_phone: str
+    caller_phone: str = ""
     interaction_id: str | None = None
     about_mother_phone: str | None = None  # additive, for ASHA callers
 
@@ -290,14 +298,14 @@ class ReadSummaryOut(BaseModel):
 
 
 class RecordUpdateIn(Lenient):
-    caller_phone: str
+    caller_phone: str = ""
     interaction_id: str | None = None
     transcript: str = ""
     about_mother_phone: str | None = None
 
 
 class OnboardingSaveIn(Lenient):
-    phone: str
+    phone: str = ""
     interaction_id: str | None = None
     transcript: str = ""
 
@@ -319,7 +327,7 @@ class ConfirmOut(BaseModel):
 
 
 class FindFacilityIn(Lenient):
-    mother_phone: str
+    mother_phone: str = ""
     need: str = "routine_checkup"
     interaction_id: str | None = None
 

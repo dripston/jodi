@@ -115,3 +115,17 @@ def test_missing_interaction_id_is_tolerated(client):
         "/tools/assess-risk", headers=AUTH, json={"phone": "+919800000001", "transcript": "User: ella chennagide"}
     )
     assert r.status_code == 200 and r.json()["level"] == "green"
+
+
+def test_null_caller_phone_is_an_unknown_caller(client):
+    """Sarvam dashboard 'Send' tests pass User identifier = null."""
+    r = client.post("/tools/read-summary", headers=AUTH, json={"caller_phone": None, "interaction_id": None})
+    assert r.status_code == 200 and r.json()["allowed"] is False
+    r = client.post("/tools/record-update", headers=AUTH, json={"caller_phone": None, "transcript": "User: BP 120/80"})
+    assert r.status_code == 200
+    r = client.post("/tools/find-facility", headers=AUTH, json={"mother_phone": None, "need": "emergency_obstetric"})
+    assert r.status_code == 200 and r.json()["say_text"]
+    before = client.get("/api/mothers").json()
+    r = client.post("/tools/onboarding-save", headers=AUTH, json={"phone": None, "transcript": "User: naanu Asha"})
+    assert r.status_code == 200 and r.json()["pending_id"] is None
+    assert len(client.get("/api/mothers").json()) == len(before)  # no phoneless mother created
