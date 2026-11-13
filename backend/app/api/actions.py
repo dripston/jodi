@@ -10,9 +10,17 @@ from sqlmodel import Session
 from app.api.deps import now
 from app.db.session import get_session
 from app.repositories import mothers as mrepo
-from app.schemas.api import PhotoOut, PlaceCallIn, PlaceCallOut, TicketActionIn, TicketOut
+from app.schemas.api import (
+    MotherDetail,
+    PhotoOut,
+    PlaceCallIn,
+    PlaceCallOut,
+    RegisterIn,
+    TicketActionIn,
+    TicketOut,
+)
 from app.services import call_service, onboarding_service, ticket_service
-from app.services.serializers import ticket_out
+from app.services.serializers import baby_out, mother_out, ticket_out
 
 router = APIRouter(prefix="/api", tags=["actions"])
 
@@ -44,6 +52,15 @@ async def onboarding_photo(
     content = await file.read()
     return await onboarding_service.submit_photo(s, phone, file.filename or "slip.jpg", content,
                                                  file.content_type or "image/jpeg", t)  # fmt: skip
+
+
+@router.post("/onboarding/register", response_model=MotherDetail)
+async def onboarding_register(
+    body: RegisterIn, s: Session = Depends(get_session), t: datetime = Depends(now)
+) -> MotherDetail:
+    m = await onboarding_service.register(s, body, t)
+    baby = mrepo.baby_of(s, m.id)
+    return MotherDetail(mother=mother_out(s, m, t), baby=baby_out(baby) if baby else None)
 
 
 @router.get("/onboarding/photo/{job_id}", response_model=PhotoOut)

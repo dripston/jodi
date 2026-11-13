@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     demo_mother_phone: str = ""  # phone A (Lakshmi)
     demo_husband_phone: str = ""  # phone B (Ravi)
     demo_asha_phone: str = ""  # phone C (ASHA Sunita)
+    demo_asha_name: str = ""  # the real ASHA's name for phone C (empty = "Sunita")
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'jodi.db').as_posix()}"
     scheduler_enabled: bool = True

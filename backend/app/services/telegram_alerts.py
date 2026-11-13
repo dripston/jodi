@@ -88,7 +88,7 @@ async def notify_status_green(s: Session, mother: Mother, now: datetime) -> int:
                                next_call=next_call_text(s, mother))  # fmt: skip
         key = f"status:{mother.id}:{ist_today(now).isoformat()}"
         sent = 0
-        for link in tg.active_links(s, mother.id, roles=("family",)):
+        for link in [*tg.active_links(s, mother.id, roles=("family",)), *tg.asha_links(s, mother)]:
             sent += bool(await tg.send_logged(s, link, text, "status", now, dedupe_key=key))
         return sent
     except Exception:

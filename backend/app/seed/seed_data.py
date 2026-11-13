@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlmodel import Session
 
@@ -74,42 +74,26 @@ def _add_mother(s: Session, m: Mother, baby: Baby, family: list[FamilyContact]) 
     return m
 
 
-def seed(s: Session, now: datetime) -> None:
+def seed(s: Session, now: datetime, with_demo_mother: bool = True) -> None:
+    """`with_demo_mother=False` = clean start: Lakshmi is not pre-registered; the demo onboards a
+    real mother live. The ASHAs, facilities and the two sample mothers stay."""
     today = ist_today(now)
     phones = demo_phones()
+    asha_name = get_settings().demo_asha_name
     for aid, name, phone, village in ASHAS:
-        s.add(Asha(id=aid, name=name, phone=phones["asha"] if phone == "ASHA_PHONE" else phone, village=village))
+        s.add(Asha(id=aid, name=(asha_name or name) if phone == "ASHA_PHONE" else name,
+                   phone=phones["asha"] if phone == "ASHA_PHONE" else phone, village=village))  # fmt: skip
     for fid, name, typ, services, lat, lng, cost, h24 in FACILITIES:
         s.add(Facility(id=fid, name=name, type=typ, services=services, lat=lat, lng=lng,
                        phone=f"+918000000{fid[-3:]}", cost_band=cost, open_24x7=h24))  # fmt: skip
     s.commit()
 
+    seeded: list[Mother] = []
     # 1. Lakshmi — the demo mother. Registered by her ASHA (delivered yesterday); clinical
     #    details arrive through the onboarding demo (discharge slip + voice read-back).
-    lakshmi = _add_mother(
-        s,
-        Mother(
-            id="m_001",
-            name="Lakshmi",
-            phone=phones["mother"],
-            language="kn",
-            delivery_date=today - timedelta(days=1),
-            delivery_type="c_section",
-            asha_id="a_001",
-            lat=12.9600,
-            lng=77.5800,
-            created_at=now,
-        ),  # fmt: skip
-        Baby(id="b_001", mother_id="m_001"),
-        [
-            FamilyContact(
-                mother_id="m_001", name="Ravi", relation="husband", phone=phones["husband"], decision_maker=True
-            ),
-            FamilyContact(mother_id="m_001", name="Savitri", relation="mother_in_law", phone="+919800000006"),
-        ],  # fmt: skip
-    )
-    record_service.append_entry(s, lakshmi, subject="mother", kind="note", source="system", now=now - timedelta(hours=20),
-                                value="Registered by ASHA Sunita after delivery")  # fmt: skip
+    #    Skipped on a clean start: the demo then onboards a real mother live.
+    if with_demo_mother:
+        seeded.append(_seed_lakshmi(s, phones, today, now))
 
     # 2. Kavya — day 9, missed two scheduled calls → H-MISSED-01 amber + ASHA task.
     kavya = _add_mother(
@@ -174,7 +158,7 @@ def seed(s: Session, now: datetime) -> None:
         (7, "baby", "weight_grams", 3250.0, "baby weight 3.25 kilograms", "asha_measured"),
     ])  # fmt: skip
 
-    for m in (lakshmi, kavya, priya):
+    for m in (*seeded, kavya, priya):
         baby = s.get(Baby, f"b_{m.id[2:]}")
         m.risk_profile = "high" if is_high_risk(m.delivery_type, m.complications,
                                                 baby.birth_weight_grams if baby else None,
@@ -182,6 +166,34 @@ def seed(s: Session, now: datetime) -> None:
         s.commit()
         call_service.plan_milestones(s, m, now)
         refresh_status(s, m)
+
+
+def _seed_lakshmi(s: Session, phones: dict[str, str], today: date, now: datetime) -> Mother:
+    lakshmi = _add_mother(
+        s,
+        Mother(
+            id="m_001",
+            name="Lakshmi",
+            phone=phones["mother"],
+            language="kn",
+            delivery_date=today - timedelta(days=1),
+            delivery_type="c_section",
+            asha_id="a_001",
+            lat=12.9600,
+            lng=77.5800,
+            created_at=now,
+        ),  # fmt: skip
+        Baby(id="b_001", mother_id="m_001"),
+        [
+            FamilyContact(
+                mother_id="m_001", name="Ravi", relation="husband", phone=phones["husband"], decision_maker=True
+            ),
+            FamilyContact(mother_id="m_001", name="Savitri", relation="mother_in_law", phone="+919800000006"),
+        ],  # fmt: skip
+    )
+    record_service.append_entry(s, lakshmi, subject="mother", kind="note", source="system", now=now - timedelta(hours=20),
+                                value="Registered by her ASHA after delivery")  # fmt: skip
+    return lakshmi
 
 
 def _history(s: Session, m: Mother, now: datetime,

@@ -358,3 +358,46 @@ def test_asha_status_lists_her_mothers(client, tg):
     assert "Lakshmi" in out and "(open alert)" in out and "+91" not in out
     send(client, text(asha_chat, "/prescription"), photo(asha_chat))
     assert "family's Jodi chat" in to_chat(tg, asha_chat)[-1]["text"]
+
+
+def test_clean_start_register_real_mother_rebinds_family_telegram(client, tg):
+    from tests.conftest import AUTH
+
+    link_ravi(client, tg)  # husband's chat linked earlier
+    assert client.post("/api/demo/reset?mode=clean").status_code == 200
+    names = [m["name"] for m in client.get("/api/mothers").json()]
+    assert "Lakshmi" not in names  # nobody pre-registered on the mother's phone
+
+    body = {
+        "phone": "9800000001", "name": "Meera", "language": "hi", "asha_id": "a_001",
+        "delivery_date": "2026-11-12", "delivery_type": "c_section", "complications": ["gestational_hypertension"],
+        "baby_birth_weight_grams": 2600, "gestation_weeks": 38,
+        "medicines": [{"name": "Labetalol", "dose": "100 mg", "frequency": "twice daily"}],
+        "family": [{"name": "Ravi", "relation": "husband", "phone": "919800000002", "decision_maker": True}],
+    }  # fmt: skip
+    r = client.post("/api/onboarding/register", json=body)
+    assert r.status_code == 200, r.text
+    m = r.json()["mother"]
+    assert m["name"] == "Meera" and m["phone"] == "+919800000001" and m["language"] == "hi"
+    assert m["family_phones"][0]["phone"] == RAVI and m["family_phones"][0]["decision_maker"]
+    assert m["consent_at"] is None and r.json()["baby"]["birth_weight_grams"] == 2600
+    tl = client.get(f"/api/mothers/{m['id']}/timeline").json()
+    assert any("Labetalol" in (e["value"] or "") for e in tl)
+    assert any("Registered on the dashboard" in (e["value"] or "") for e in tl)
+    planned = client.get(f"/api/mothers/{m['id']}/planned-calls").json()
+    assert planned and all(c["status"] == "pending" for c in planned)
+
+    ctx = client.post("/hooks/on-start", headers=AUTH, json={"phone": "+919800000001", "interaction_id": "reg1"}).json()
+    assert ctx["call_purpose"] == "onboarding" and ctx["mother_name"] == "Meera"  # her own consent first
+
+    client.post("/api/demo/inject", json={"mother_id": m["id"], "transcript": RED})
+    assert to_chat(tg, RAVI_CHAT)[-1]["text"].startswith("🔴 URGENT — Jodi alert for Meera")  # re-bound by phone
+
+
+def test_green_status_also_reaches_the_asha(client, tg):
+    asha_chat = 7012
+    send(client, text(asha_chat, "/start"), contact(asha_chat, "919800000009"))
+    client.post(
+        "/api/demo/inject", json={"mother_id": "m_001", "transcript": "User: ellaru chennagiddeve, yaava tondare illa"}
+    )
+    assert any(msg["text"].startswith("🟢") for msg in to_chat(tg, asha_chat))

@@ -19,7 +19,7 @@ from app.integrations.registry import get_integrations
 from app.integrations.sarvam_llm import ExtractionError
 from app.repositories import mothers as mrepo
 from app.repositories import records as rrepo
-from app.schemas.api import OnboardingSaveIn, PendingOut, PhotoOut
+from app.schemas.api import FamilyIn, OnboardingSaveIn, PendingOut, PhotoOut, RegisterIn
 from app.services import call_service, record_service
 from app.services.ids import new_id
 from app.services.status import refresh_status
@@ -131,6 +131,56 @@ async def onboarding_save(s: Session, body: OnboardingSaveIn, now: datetime) -> 
     return PendingOut(pending_id=p.id, readback_text=readback)
 
 
+async def register(s: Session, body: RegisterIn, now: datetime) -> Mother:
+    """Dashboard onboarding: the ASHA confirms the slip fields (OCR) and adds her real name and family.
+    Creates the health record now; Jodi asks the mother's own consent on the first call."""
+    mother = ensure_mother(s, body.phone, now)
+    mother.name = body.name.strip() or mother.name
+    if body.language in ("kn", "hi", "en"):
+        mother.language = body.language
+    if body.asha_id:
+        mother.asha_id = body.asha_id
+    if body.lat is not None and body.lng is not None:
+        mother.lat, mother.lng = body.lat, body.lng
+    s.commit()
+    typed = {k: v for k, v in body.model_dump(include=SLIP_FIELDS).items() if v not in (None, [], "")}
+    if "medicines" in typed:
+        typed["medicines"] = normalize_medicines(typed["medicines"])
+    fields = {**_photo_fields(s, mother.id), **typed}  # what the ASHA confirmed on screen wins
+    p = PendingUpdate(id=new_id("p"), kind="onboarding", mother_id=mother.id, caller_phone=None,
+                      interaction_id=f"dash_{mother.id}_{int(now.timestamp())}", source="document_extracted",
+                      status="saved", payload={"fields": fields, "sources": dict.fromkeys(fields, "document_extracted")},
+                      readback_text="(confirmed on the dashboard)", created_at=now)  # fmt: skip
+    s.add(p)
+    s.commit()
+    await apply_onboarding(s, p, now, consent_by="dashboard:asha")
+    _set_family(s, mother, body.family)
+    from app.services.telegram_onboarding import rebind_family_links  # avoids an import cycle
+
+    rebind_family_links(s, mother)
+    refresh_status(s, mother)
+    return mother
+
+
+SLIP_FIELDS = {"delivery_date", "delivery_type", "complications", "baby_birth_weight_grams", "gestation_weeks",
+               "medicines"}  # fmt: skip
+
+
+def _set_family(s: Session, mother: Mother, family: list[FamilyIn]) -> None:
+    """Add/update family contacts by phone; exactly one decision-maker (the flagged one, else the first)."""
+    if not family:
+        return
+    dm_index = next((i for i, f in enumerate(family) if f.decision_maker), 0)
+    existing = {c.phone: c for c in mrepo.family_of(s, mother.id)}
+    for c in existing.values():
+        c.decision_maker = False
+    for i, f in enumerate(family):
+        c = existing.get(f.phone) or FamilyContact(mother_id=mother.id, phone=f.phone)
+        c.name, c.relation, c.decision_maker = f.name, f.relation, i == dm_index
+        s.add(c)
+    s.commit()
+
+
 def _apply_profile(s: Session, mother: Mother, f: dict[str, Any]) -> None:
     baby = mrepo.baby_of(s, mother.id)
     if d := f.get("delivery_date"):
@@ -199,8 +249,13 @@ async def apply_onboarding(s: Session, p: PendingUpdate, now: datetime, consent_
     mother.onboarded_at = mother.onboarded_at or now
     s.commit()
     ids = _onboarding_entries(s, mother, p, f, now)
-    note = (f"Consent recorded via Telegram by {consent_by.split(':')[-1]}" if consent_by
-            else "Spoken consent recorded on onboarding call")  # fmt: skip
+    channel, _, by = (consent_by or "").partition(":")
+    if consent_by is None:
+        note = "Spoken consent recorded on onboarding call"
+    elif channel == "telegram":
+        note = f"Consent recorded via Telegram by {by}"
+    else:
+        note = f"Registered on the {channel} by the {by}; her own spoken consent is asked on her first call"
     record_service.append_entry(s, mother, subject="mother", kind="note", source="system", now=now,
                                 value=note, source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
     call_service.plan_milestones(s, mother, now)

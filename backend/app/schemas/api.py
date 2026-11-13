@@ -382,6 +382,52 @@ class PhotoOut(BaseModel):
     error: str | None = None  # additive: set (with fields = null) when reading the slip failed
 
 
+class FamilyIn(BaseModel):
+    name: str = ""
+    relation: str = ""
+    phone: str
+    decision_maker: bool = False
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def _p(cls, v: Any) -> Any:
+        return normalize_phone(str(v)) if v else v
+
+
+class RegisterIn(BaseModel):
+    """POST /api/onboarding/register (additive): the dashboard onboarding form."""
+
+    phone: str
+    name: str
+    language: str = "kn"
+    asha_id: str | None = None
+    delivery_date: str | None = None
+    delivery_type: str | None = None
+    complications: list[str] = Field(default_factory=list)
+    baby_birth_weight_grams: int | None = None
+    gestation_weeks: int | None = None
+    medicines: list[dict[str, Any]] = Field(default_factory=list)
+    family: list[FamilyIn] = Field(default_factory=list)
+    lat: float | None = None
+    lng: float | None = None
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def _p(cls, v: Any) -> Any:
+        return normalize_phone(str(v)) if v else v
+
+
+class PlannedCallOut(BaseModel):
+    """GET /api/mothers/{id}/planned-calls (additive): Jodi's upcoming and past scheduled calls."""
+
+    id: str
+    day: int | None
+    due_at: str | None
+    purpose: str
+    reason: str
+    status: str
+
+
 class AdvanceDayIn(BaseModel):
     mother_id: str
     days: int = 1

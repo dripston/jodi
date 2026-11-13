@@ -342,6 +342,11 @@ All optional / additive; nothing existing was removed or renamed.
 - **§6 ASHA list item:** optional `ticket_id`.
 - **§6 lists:** `/api/mothers` lists only enrolled mothers (with a delivery date); a stub created by a photo upload appears after onboarding is confirmed. `/api/calls/recent` lists calls linked to a mother. `CallLog.outcome` / `duration_seconds` are omitted (not null) while a call is in progress.
 
+- **`POST /api/onboarding/register`** (dashboard onboarding form) → `{ mother, baby }` (as `/api/mothers/{id}`). Body: `{ phone, name, language?, asha_id?, delivery_date?, delivery_type?, complications?, baby_birth_weight_grams?, gestation_weeks?, medicines?: [{name, dose, frequency}], family?: [{name, relation, phone, decision_maker}], lat?, lng? }`. Creates or updates the mother on that phone. Fields from a finished `/api/onboarding/photo` job are used unless the body overrides them. It also plans her calls and re-attaches any family Telegram chat with a listed phone. `consent_at` stays null, so her first call (`call_purpose = onboarding`) asks her own spoken consent.
+- **`GET /api/mothers/{id}/planned-calls`** → `[{ id, day, due_at, purpose, reason, status }]`, oldest first (status `pending|placed|answered|missed|cancelled`).
+- **`/hooks/on-start`** response: optional `previous_symptoms` (recent present symptoms, newest first, e.g. `"severe headache (yesterday)"`); also prefixed to `last_summary` as `"Recently reported symptoms: …"`.
+- **`POST /api/demo/reset?mode=clean`**: no pre-registered demo mother (onboard a real one live); default `mode=demo` keeps the previous behaviour.
+
 ## 9. Telegram family channel (backend, 2026-11-13; additive)
 
 Telegram is an **extra** channel for families. Voice calls stay primary: a red alert always places the phone call / transfer and ASHA alert first, and Telegram is sent in addition (never the only alert). Messages carry status and instructions only (no transcripts, no full phone numbers), from fixed templates based on `docs/red-scripts.md`.

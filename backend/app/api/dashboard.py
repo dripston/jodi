@@ -24,6 +24,7 @@ from app.schemas.api import (
     MotherDetail,
     MotherOut,
     OutboundMessageOut,
+    PlannedCallOut,  # noqa: E402
     RecentCall,
     StatsOut,
     StatusByDay,
@@ -104,6 +105,22 @@ def summary(mother_id: str, s: Session = Depends(get_session), t: datetime = Dep
 def mother_calls(mother_id: str, s: Session = Depends(get_session)) -> list[CallLogOut]:
     mrepo.get_mother(s, mother_id)
     return [call_out(c) for c in rrepo.recent_calls(s, 200, mother_id)]
+
+
+@router.get("/mothers/{mother_id}/planned-calls", response_model=list[PlannedCallOut])
+def planned_calls(mother_id: str, s: Session = Depends(get_session)) -> list[PlannedCallOut]:
+    """Jodi's scheduled calls for her (milestone days, rechecks, retries), oldest first."""
+    from sqlmodel import col, select
+
+    from app.core.time import iso
+    from app.db.models import ScheduledCall
+
+    mrepo.get_mother(s, mother_id)
+    q = select(ScheduledCall).where(ScheduledCall.mother_id == mother_id).order_by(col(ScheduledCall.due_at))
+    return [
+        PlannedCallOut(id=c.id, day=c.day, due_at=iso(c.due_at), purpose=c.purpose, reason=c.reason, status=c.status)
+        for c in s.exec(q)
+    ]
 
 
 @router.get("/mothers/{mother_id}/messages", response_model=list[OutboundMessageOut])

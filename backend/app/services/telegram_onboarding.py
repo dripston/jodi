@@ -120,6 +120,23 @@ async def save_onboarding(s: Session, chat_id: str, tg_user_id: str, d: dict[str
     return mother
 
 
+def rebind_family_links(s: Session, mother: Mother) -> int:
+    """A family member's Telegram chat (linked earlier, e.g. before a clean reset) attaches to this
+    mother as soon as her record lists that phone. Returns how many chats were bound."""
+    phones = {c.phone for c in mrepo.family_of(s, mother.id)}
+    bound = 0
+    for link in s.exec(select(TelegramLink).where(TelegramLink.role == "family", TelegramLink.active == True)):  # noqa: E712
+        if (
+            link.phone in phones
+            and link.mother_id != mother.id
+            and (link.mother_id is None or s.get(Mother, link.mother_id) is None)
+        ):
+            link.mother_id = mother.id
+            bound += 1
+    s.commit()
+    return bound
+
+
 def welcome_values(s: Session, mother: Mother) -> dict[str, Any]:
     pending = rrepo.pending_scheduled(s, mother.id)
     first = pending[0] if pending else None

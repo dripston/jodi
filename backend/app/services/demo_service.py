@@ -16,7 +16,7 @@ from app.services.assessment_service import _CACHE
 from app.services.ids import new_id
 
 
-def reset(s: Session, now: datetime, keep_telegram: bool = True) -> None:
+def reset(s: Session, now: datetime, keep_telegram: bool = True, mode: str = "demo") -> None:
     """Back to the seeded demo state. Telegram chats that are linked stay linked (seed ids are stable),
     so a demo can be re-run without every family member re-sharing their contact."""
     links = [TelegramLink(**r.model_dump()) for r in s.exec(select(TelegramLink)).all()] if keep_telegram else []
@@ -28,9 +28,11 @@ def reset(s: Session, now: datetime, keep_telegram: bool = True) -> None:
     s.close()
     reset_db()
     _CACHE.clear()
-    seed(s, now)
-    kept = {lk.chat_id for lk in links if lk.mother_id is None or s.get(Mother, lk.mother_id) is not None}
-    s.add_all([lk for lk in links if lk.chat_id in kept] + [ts for ts in sessions if ts.chat_id in kept])
+    seed(s, now, with_demo_mother=mode != "clean")
+    for lk in links:  # a family chat whose mother is gone waits unbound; onboarding re-binds it by phone
+        if lk.mother_id is not None and s.get(Mother, lk.mother_id) is None:
+            lk.mother_id = None
+    s.add_all([*links, *sessions])
     s.commit()
 
 
