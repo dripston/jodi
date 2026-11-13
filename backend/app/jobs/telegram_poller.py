@@ -7,7 +7,7 @@ import contextlib
 import logging
 
 from app.core.config import get_settings
-from app.core.logging import log, redact_secrets
+from app.core.logging import log, mask_text, redact_secrets
 from app.core.time import utcnow
 from app.db.session import new_session
 from app.integrations.registry import get_integrations
@@ -17,8 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 async def _handle(update: dict) -> None:
-    with new_session() as s:
-        await telegram_service.handle_update(s, update, utcnow())
+    kind = "callback" if "callback_query" in update else "message"
+    log(logger, "telegram update received", update_id=update.get("update_id"), kind=kind)
+    try:
+        with new_session() as s:
+            await telegram_service.handle_update(s, update, utcnow())
+    except Exception as exc:  # noqa: BLE001  (a background task: without this the error is silent)
+        log(logger, "telegram update failed", logging.ERROR, update_id=update.get("update_id"),
+            error=type(exc).__name__, detail=mask_text(str(exc))[:300])
 
 
 async def poll_forever() -> None:
@@ -38,7 +44,8 @@ async def poll_forever() -> None:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            log(logger, "telegram polling error", logging.WARNING, error=redact_secrets(type(exc).__name__))
+            log(logger, "telegram polling error", logging.WARNING, error=type(exc).__name__,
+                detail=mask_text(str(exc))[:300])
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 30.0)
 
