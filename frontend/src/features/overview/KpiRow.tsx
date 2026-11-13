@@ -18,11 +18,11 @@ export function KpiRow() {
             <span className="inline-flex items-baseline gap-4">
               <span className="inline-flex items-baseline gap-1.5">
                 <span className="text-red-fg">{data.open_alerts.red}</span>
-                <span className="text-small font-medium text-red-fg">urgent</span>
+                <span className="font-sans text-small font-medium text-red-fg">urgent</span>
               </span>
               <span className="inline-flex items-baseline gap-1.5">
                 <span className="text-amber-fg">{data.open_alerts.amber}</span>
-                <span className="text-small font-medium text-amber-fg">check today</span>
+                <span className="font-sans text-small font-medium text-amber-fg">check today</span>
               </span>
             </span>
           ) : ''

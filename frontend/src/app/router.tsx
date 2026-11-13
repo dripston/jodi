@@ -11,9 +11,13 @@ function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, n
 
 export const router = createBrowserRouter([
   {
+    element: <BareLayout />,
+    children: [{ path: '/', element: page(() => import('@/features/landing/LandingPage'), 'LandingPage') }],
+  },
+  {
     element: <AppShell />,
     children: [
-      { path: '/', element: page(() => import('@/features/overview/OverviewPage'), 'OverviewPage') },
+      { path: '/app', element: page(() => import('@/features/overview/OverviewPage'), 'OverviewPage') },
       { path: '/alerts', element: page(() => import('@/features/alerts/AlertsPage'), 'AlertsPage') },
       { path: '/mothers', element: page(() => import('@/features/mothers/MothersPage'), 'MothersPage') },
       { path: '/mothers/:id', element: page(() => import('@/features/mothers/MotherProfilePage'), 'MotherProfilePage') },

@@ -33,6 +33,16 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Display type (page titles, names, key numbers) uses the serif everywhere, as on the landing page. */
+  .text-display,
+  .text-title,
+  .text-h1 {
+    font-family: var(--font-serif);
+  }
+  /* Thin diagonal hatch for decorative panels. */
+  .hatch {
+    background-image: repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 9px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -42,5 +52,8 @@
   }
   .animate-ring-pulse {
     animation: none !important;
+  }
+  [class*='animate-fade-up'] {
+    animation: fade-in 240ms linear both !important;
   }
 }

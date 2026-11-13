@@ -26,7 +26,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Programme',
     items: [
-      { to: '/', label: 'Overview', icon: LayoutDashboard },
+      { to: '/app', label: 'Overview', icon: LayoutDashboard },
       { to: '/alerts', label: 'Alerts', icon: Siren, badge: 'alerts' },
       { to: '/mothers', label: 'Mothers', icon: Users },
       { to: '/calls', label: 'Calls', icon: Phone },

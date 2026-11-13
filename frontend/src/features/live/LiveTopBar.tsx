@@ -11,7 +11,7 @@ export function LiveTopBar({ error }: { error: boolean }) {
   }, []);
   return (
     <header className="flex h-14 items-center gap-4 border-b border-border bg-surface px-4 md:px-6">
-      <Link to="/" aria-label="Back to dashboard">
+      <Link to="/app" aria-label="Back to dashboard">
         <Logo />
       </Link>
       <span aria-hidden className="h-5 w-px bg-border" />
