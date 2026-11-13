@@ -20,7 +20,7 @@ MEDICINES = (
 _MED = re.compile(
     r"(?P<stop>stop(?:ped)?\s+|band\s+)?(?<!\w)(?P<name>"
     + "|".join(re.escape(m) for m in sorted(MEDICINES, key=len, reverse=True))
-    + r")(?!\w)(?:\s*(?P<dose>\d+(?:\.\d+)?)\s*(?P<unit>mg|mcg|g|ml|units?)?)?",
+    + r")(?!\w)(?:\s*(?P<dose>\d+(?:\.\d+)?)\s*(?P<unit>milligrams?|mg|mcg|g|ml|units?)?)?",
     re.IGNORECASE,
 )
 _FREQ = re.compile(
@@ -47,19 +47,20 @@ _NAME = re.compile(r"(?:name\s+is|hesaru|naam)\s+([A-Z][a-z]+)|([A-Z][a-z]+),?\s
 
 
 def parse_medicines(text: str) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+    """Medicines mentioned; a later mention of the same medicine refines dose/frequency."""
+    found: dict[str, dict[str, Any]] = {}
     for sentence in re.split(r"(?:[!?\n]|\.(?!\d))+", text):
         freq = _FREQ.search(sentence)
         for m in _MED.finditer(sentence):
-            dose = m.group("dose")
-            unit = m.group("unit") or ""
-            out.append({
-                "name": m.group("name").title() if m.group("name").lower() != "ifa" else "IFA",
-                "dose": f"{dose} {unit}".strip() if dose else None,
-                "frequency": freq.group(0).lower() if freq else None,
-                "action": "stopped" if m.group("stop") else "started",
-            })  # fmt: skip
-    return out
+            name = m.group("name").title() if m.group("name").lower() != "ifa" else "IFA"
+            unit = (m.group("unit") or "").lower()
+            unit = "mg" if unit.startswith("milligram") else unit
+            dose = f"{m.group('dose')} {unit}".strip() if m.group("dose") else None
+            med = found.setdefault(name.lower(), {"name": name, "dose": None, "frequency": None, "action": "started"})
+            med["dose"] = dose or med["dose"]
+            med["frequency"] = (freq.group(0).lower() if freq else None) or med["frequency"]
+            med["action"] = "stopped" if m.group("stop") else med["action"]
+    return list(found.values())
 
 
 def describe_medicine(med: dict[str, Any]) -> str:
@@ -85,6 +86,12 @@ def _parse_date(text: str, today: date) -> date | None:
     if re.search(r"\btoday\b|\bivattu\b|\baaj\b", text, re.IGNORECASE):
         return today
     return None
+
+
+def _last_date(text: str, today: date) -> date | None:
+    """The most recently said date wins (the caller may correct herself)."""
+    dates = [d for line in text.splitlines() if (d := _parse_date(line, today))]
+    return dates[-1] if dates else _parse_date(text, today)
 
 
 def _delivery_type(text: str) -> str | None:
@@ -123,16 +130,16 @@ def parse_onboarding(transcript: str, today: date) -> dict[str, Any]:
     """Onboarding fields (contracts §6 'Onboarding photo fields' + language + family)."""
     text = caller_text(transcript)
     fields: dict[str, Any] = {}
-    if d := _parse_date(text, today):
+    if d := _last_date(text, today):
         fields["delivery_date"] = d.isoformat()
     if t := _delivery_type(text):
         fields["delivery_type"] = t
     if c := _complications(text):
         fields["complications"] = c
-    if kg := _KG.search(text):
-        fields["baby_birth_weight_grams"] = round(float(kg.group(1)) * 1000)
-    if w := _WEEKS.search(text):
-        fields["gestation_weeks"] = int(w.group(1))
+    if kgs := _KG.findall(text):
+        fields["baby_birth_weight_grams"] = round(float(kgs[-1]) * 1000)
+    if weeks := _WEEKS.findall(text):
+        fields["gestation_weeks"] = int(weeks[-1])
     if meds := parse_medicines(text):
         fields["medicines"] = meds
     lang = re.search(r"\b(kannada|hindi|english)\b", text, re.IGNORECASE)

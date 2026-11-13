@@ -9,7 +9,12 @@ READ_FULL = "full"
 READ_STATUS = "status_only"
 READ_NONE = "none"
 
-_DOCTOR = re.compile(r"(?<!\w)(?i:doctor|dr\.?|daktar|vaidyaru|vaidya)\s+(?P<name>[A-Z][a-zA-Z]+)", re.UNICODE)
+_DOCTOR = re.compile(r"(?<!\w)(?:doctor|dr\.?|daktar|vaidyaru|vaidya)\s+(?P<name>[a-z]{3,})(?!\w)", re.IGNORECASE)
+_NOT_NAMES = frozenset({
+    "said", "says", "told", "gave", "has", "have", "had", "is", "was", "will", "sir", "madam", "saab", "sahab",
+    "here", "speaking", "helidru", "heliddare", "nodbekante", "enu", "advised", "asked", "came", "ji", "and",
+    "the", "who", "wants", "visit", "checked", "also", "not", "nodidru", "bandru", "ne", "ko", "se",
+})  # fmt: skip
 _DOCTOR_WORD = re.compile(r"(?<!\w)(?:doctor|dr\.?|daktar|vaidyaru|vaidya)(?!\w)", re.IGNORECASE)
 
 
@@ -60,7 +65,7 @@ def source_for(role: str, doctor_name: str | None) -> str:
 
 def detect_doctor(transcript: str) -> tuple[bool, str | None]:
     """(doctor mentioned, doctor's name if said). doctor_verified requires a name + read-back."""
-    m = _DOCTOR.search(transcript)
-    if m:
-        return True, m.group("name")
+    for m in _DOCTOR.finditer(transcript):
+        if m.group("name").lower() not in _NOT_NAMES:
+            return True, m.group("name").title()
     return bool(_DOCTOR_WORD.search(transcript)), None

@@ -25,6 +25,20 @@ WHICH_MOTHER = "Which mother is this about? Please tell me her name or phone num
 NOT_CAUGHT = "I did not catch the details. Could you say them again?"
 
 
+_AFFIRM_ONLY = re.compile(r"^\W*(yes|haudu|houdu|haan|ha|sari|ok|okay|correct|thank you|illa|no)\W*$", re.IGNORECASE)
+
+
+def last_statement(transcript: str) -> str | None:
+    """The caller's latest substantive turn (not a bare yes/no), used as a free-text note."""
+    from app.domain.transcript import AGENT_ROLES, split_turns
+
+    turns = [t.strip() for role, t in split_turns(transcript) if role not in AGENT_ROLES and t.strip()]
+    for t in reversed(turns):
+        if len(t.split()) >= 3 and not _AFFIRM_ONLY.match(t):
+            return t[:300]
+    return None
+
+
 def _mother_by_name(candidates: list[Mother], text: str) -> Mother | None:
     hits = [m for m in candidates if m.name and re.search(rf"(?<!\w){re.escape(m.name)}(?!\w)", text, re.IGNORECASE)]
     return hits[0] if len(hits) == 1 else None
@@ -69,16 +83,20 @@ async def record_update(s: Session, body: RecordUpdateIn, now: datetime) -> Pend
     ex = await assessment_service.extract(body.transcript, f"{iid}:update", f"Update from {ident.role}.")
     meds = parse_medicines(text)
     _, doctor = access.detect_doctor(text) if ident.role == "mother" else (False, None)
-    if not ex.facts and not meds:
+    note = None if ex.facts or meds else last_statement(body.transcript)
+    if not ex.facts and not meds and not note:
         q = clarify_question(ex.unclear_codes) if ex.unclear_codes else NOT_CAUGHT
         return PendingOut(pending_id=None, readback_text=q)
     source, flags = _source(ident, mother, doctor)
-    is_health_worker = source in ("asha_measured", "doctor_verified")
+    # a measurement or prescription means a health worker has seen her; a note alone does not
+    is_health_worker = source in ("asha_measured", "doctor_verified") and bool(ex.facts or meds)
     p = PendingUpdate(
         id=new_id("p"), kind="record", mother_id=mother.id, caller_phone=body.caller_phone, interaction_id=iid,
-        source=source, readback_text=_readback(mother, ex.facts, meds, doctor), created_at=now,
-        payload={"facts": [f.to_dict() for f in ex.facts], "medicines": meds, "doctor_name": doctor,
-                 "flags": flags, "mark_reached": is_health_worker, "visit": source == "asha_measured"},
+        source=source, created_at=now,
+        readback_text=f"I heard: {note}. Shall I save this?" if note else _readback(mother, ex.facts, meds, doctor),
+        payload={"facts": [f.to_dict() for f in ex.facts], "medicines": meds, "doctor_name": doctor, "note": note,
+                 "flags": flags, "mark_reached": is_health_worker,
+                 "visit": source == "asha_measured" and bool(ex.facts)},
     )  # fmt: skip
     s.add(p)
     s.commit()
@@ -117,6 +135,10 @@ async def _apply_record(s: Session, p: PendingUpdate, now: datetime) -> list[str
             source_phone=p.caller_phone, interaction_id=p.interaction_id, flags=flags))  # fmt: skip
     entries += record_service.save_facts(s, mother, facts, source=p.source, now=now, source_phone=p.caller_phone,
                                          interaction_id=p.interaction_id, flags=flags)  # fmt: skip
+    if note := pl.get("note"):
+        entries.append(record_service.append_entry(
+            s, mother, subject="mother", kind="note", source=p.source, now=now, value=note,
+            source_phone=p.caller_phone, interaction_id=p.interaction_id, flags=flags))  # fmt: skip
     for med in pl.get("medicines", []):
         mflags = [*flags, "stopped"] if med.get("action") == "stopped" else flags
         value = describe_medicine({**med, "action": "started"})

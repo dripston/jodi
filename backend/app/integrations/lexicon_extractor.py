@@ -48,7 +48,7 @@ PHRASES: list[tuple[str, str | None, str, float]] = [
     (r"maiyalli\s+thanda|\bthanda\b|\bfeels?\s+(very\s+)?cold\b|\bis\s+(very\s+)?cold\b", None, "feels_cold", 0.8),
     (r"kettu\s+vaasane|badboo|foul[\s-]+smell", "mother", "discharge_foul", 0.85),
     (r"hotte\s+tumba\s+novu|pet\s+mein\s+bahut\s+dard|severe\s+(tummy|stomach|abdominal)\s+pain", "mother", "abdominal_pain_severe", 0.85),
-    (r"holige\s+kempu|neeru\s+barutide|taanke\s+(laal|.{0,10}pani)|stitch(es)?\s+(is\s+|are\s+)?(red|oozing)", "mother", "wound_red_or_oozing", 0.85),
+    (r"holige\s+kempu|neeru\s+barutide|taanke\s+(laal|.{0,10}pani)|stitch(es)?\b.{0,30}?\b(red|kempu|neeru|pus|oozing|pani)\b", "mother", "wound_red_or_oozing", 0.85),
     (r"edhe\s+kempu|doodh\s+wali\s+jagah\s+laal|breast\s+(is\s+)?(red|painful)", "mother", "breast_red_painful", 0.85),
     (r"kaalu\s+oodhide|pindli|calf\s+(pain|swelling|swollen)", "mother", "calf_pain_swelling", 0.85),
     (r"usiru\s+kashta|saans\s+phool|breathless|short(ness)?\s+of\s+breath", None, "breathless|breathing_fast", 0.85),
@@ -62,7 +62,7 @@ PHRASES: list[tuple[str, str | None, str, float]] = [
     (r"chest\s+(is\s+)?(going|pulling|sinking)\s+in|indrawing", "baby", "chest_indrawing", 0.85),
     (r"tumba\s+nidre|eddelu\s+illa|bilkul\s+sust|lethargic|floppy", "baby", "lethargic", 0.8),
     (r"kai\s+kaalu\s+haladi|hatheli\s+talve\s+peele|(palms?|soles?).{0,20}yellow|yellow.{0,20}(palms?|soles?)", "baby", "jaundice_palms_soles", 0.85),
-    (r"mukha\s+haladi|chehra\s+peela|(face|body|eyes)\s+(is\s+|are\s+|looks?\s+)?yellow|yellow\s+(face|body|eyes)", "baby", "jaundice_face_body", 0.85),
+    (r"(mukha|chehra)(\s+\w+)?\s+(haladi|peela)|(face|body|eyes)\s+(is\s+|are\s+|looks?\s+)?yellow|yellow\s+(face|body|eyes)", "baby", "jaundice_face_body", 0.85),
     (r"hokkalu\s+(kempu|keevu)|naal\s+(laal|mawad)|cord.{0,15}(red|pus)", "baby", "cord_red_or_pus", 0.85),
     (r"ella\s+vaanti|sab\s+ulti|vomit(s|ing)?\s+everything", "baby", "vomiting_everything", 0.85),
 ]  # fmt: skip
