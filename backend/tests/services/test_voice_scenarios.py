@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.services.assessment_service import script_book
 from tests.conftest import AUTH
 
 LAKSHMI, SUNITA = "+919800000001", "+919800000009"
@@ -43,7 +44,7 @@ def test_04_yellow_palms_day4(client):
         client, ["Magu mukha swalpa haladi aagide.", "Haudu, kai kaalu haladi ide, angai, angaala eradu."], "s04"
     )
     assert r["level"] == "red" and "B-JAUN-01" in r["rule_ids"]
-    assert r["say_verbatim"].startswith("Your baby needs to see a doctor now.")
+    assert r["say_verbatim"].startswith(script_book().get("RED-BABY", "kn")[0].split(".")[0])
 
 
 def test_06_code_mixed_stitches(client):
@@ -111,7 +112,7 @@ def test_11_fits_in_passing_safety_net(client):
     r = assess(client, ["Lakshmi malagidaale, naanu avara atte.",
                         "Tale novu… haan, nenne raatri swalpa hottu fits bantu, aadre ega parvaagilla, enu chinte beda."], "s11")  # fmt: skip
     assert r["level"] == "red" and {"K-SAFETY-01", "M-FITS-01"} <= set(r["rule_ids"])
-    assert r["say_verbatim"].startswith("Turn her gently on her side")
+    assert r["say_verbatim"] == script_book().get("RED-FITS", "kn")[0]
 
 
 def test_12_everyday_question_green(client):

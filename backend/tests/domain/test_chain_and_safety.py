@@ -73,9 +73,18 @@ def test_scripts_parsed_from_docs():
     book = ScriptBook.load(DOCS / "red-scripts.md")
     for sid in ("RED-MOTHER", "RED-BABY", "RED-FITS", "RED-FITS-BABY", "RED-BLEED",
                 "AMBER-MOTHER", "AMBER-BABY", "DISMISSAL-RESPONSE", "FAMILY-ALERT", "NOT-ALLOWED"):  # fmt: skip
-        text, lang = book.get(sid, "kn")
-        assert text and lang == "en"  # no kn translation yet → English master
+        text, lang = book.get(sid, "en")
+        assert text and lang == "en"
+        if sid != "RED-FITS-BABY":  # the baby fits variant has no kn/hi lines yet → English master
+            for want in ("kn", "hi"):
+                text, lang = book.get(sid, want)
+                assert lang == want and text != book.get(sid, "en")[0], (sid, want)
+    assert book.get("RED-FITS-BABY", "kn")[1] == "en"
     assert "…" not in book.get("RED-FITS-BABY", "en")[0]
+    assert book.get("RED-BLEED", "hi")[0].endswith("।")  # Hindi danda kept, no extra "."
+    kn, _ = book.render("RED-BLEED", "kn", None, None)
+    assert "{" not in kn and "ಸರ್ಕಾರಿ ಆಸ್ಪತ್ರೆ" in kn  # localized default facility
+    assert "{" not in book.render("FAMILY-ALERT", "hi", None, "X")[0]
 
 
 def test_script_render_placeholders():

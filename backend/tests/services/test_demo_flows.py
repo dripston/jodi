@@ -98,8 +98,9 @@ def test_demo_checkin_is_amber_with_fixed_scripts(client):
     r = assess(client, DEMO_CHECKIN, "int_chk")
     assert r["level"] == "amber" and r["transfer_to"] is None
     assert {"M-BLEED-02", "M-HTN-05", "B-FEED-02"} <= set(r["rule_ids"])
-    amber_m, _ = script_book().render("AMBER-MOTHER", "en", "Lakshmi")
-    assert r["say_verbatim"].startswith(amber_m) and "Your baby should be checked today" in r["say_verbatim"]
+    amber_m, used = script_book().render("AMBER-MOTHER", "kn", "Lakshmi")  # Lakshmi's call language is Kannada
+    assert used == "kn"
+    assert r["say_verbatim"].startswith(amber_m) and script_book().get("AMBER-BABY", "kn")[0] in r["say_verbatim"]
     codes = {e["code"] for e in client.get("/api/mothers/m_001/timeline").json()}
     assert {"pads_soaked_count", "headache_severe", "feeding_poor"} <= codes  # facts appear live
     assert client.get("/api/mothers/m_001").json()["mother"]["status"] == "amber"
@@ -123,7 +124,7 @@ def test_safety_net_fires_even_if_llm_fails(client, monkeypatch):
     monkeypatch.setattr(get_integrations().extractor, "extract", boom)
     r = assess(client, "User: avalige jhatke bantu")
     assert r["level"] == "red" and "K-SAFETY-01" in r["rule_ids"]
-    assert r["say_verbatim"].startswith("Turn her gently on her side")
+    assert r["say_verbatim"] == script_book().get("RED-FITS", "kn")[0]
     green = assess(client, "User: ella chennagide", iid="int_2")
     assert green["level"] == "green" and green["clarify_question"] == "Could you tell me that again?"
 
@@ -267,7 +268,7 @@ def test_family_alert_call_reads_alert_and_yes_acknowledges(client):
     )
     start(client, "int_fam", RAVI, "outbound")  # binds the family_alert call placed by the ticket
     r = assess(client, "Agent: Namaskara\nUser: haa, heli", iid="int_fam", phone=RAVI)
-    assert r["level"] == "red" and r["say_verbatim"].startswith("Namaskara, this is Jodi, calling about Lakshmi")
+    assert r["level"] == "red" and r["say_verbatim"].startswith("ನಮಸ್ಕಾರ, ನಾನು ಜೋಡಿ, Lakshmi ಬಗ್ಗೆ")
     assert r["transfer_to"] is None
     r = assess(client, "User: haa, heli\nUser: delivery aadmele heege, normal", iid="int_fam", phone=RAVI)
     assert r["say_verbatim"] == script_book().get("DISMISSAL-RESPONSE", "kn")[0]
