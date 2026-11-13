@@ -396,7 +396,7 @@ def test_hindi_speech_gets_hindi_script_even_if_language_variable_says_kannada(c
     )
 
 
-def test_red_family_calls_one_at_a_time_and_again_until_acknowledged(client, clock, monkeypatch):
+def test_red_family_calls_once_per_call_and_again_until_acknowledged(client, monkeypatch):
     from app.core.config import get_settings
 
     monkeypatch.setattr(get_settings(), "family_contact", "call")
@@ -407,15 +407,13 @@ def test_red_family_calls_one_at_a_time_and_again_until_acknowledged(client, clo
         return sum(p[1] == "family_alert" for p in placed[n:])
 
     assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m")  # mother red → ticket + call
-    assess(client, "User: maguvige usiru bega bartide", "int_m")  # new red sign 0 s later → no double ring
+    assess(client, "User: maguvige usiru bega bartide", "int_m")  # 2nd sign, same call → no double ring
     assert family_calls() == 1
     lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
-    assert any("new danger sign" in h["note"] for h in lak["history"])  # but ASHA/Telegram re-alerted
-    clock.advance(minutes=1)
-    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m2")  # red again, not acknowledged
+    assert any("new danger sign" in h["note"] for h in lak["history"])  # ASHA/Telegram still re-alerted
+    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m2")  # new call, no time gap → rings
     assert family_calls() == 2
     assert client.post(f"/api/tickets/{lak['id']}/ack", json={"by": "family", "note": "on it"}).status_code == 200
-    clock.advance(minutes=1)
     assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m3")  # family on it → no more calls
     assert family_calls() == 2
 

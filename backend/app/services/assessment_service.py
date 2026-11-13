@@ -192,7 +192,7 @@ async def assess_transcript(
         entries = record_service.save_facts(s, mother, ex.facts, source=source, now=now,
                                             source_phone=caller_phone, interaction_id=interaction_id,
                                             flags=flags)  # fmt: skip
-        ticket = await ticket_service.apply_assessment(s, mother, a, now, live)
+        ticket = await ticket_service.apply_assessment(s, mother, a, now, live, interaction_id)
         _reminders(s, mother, a, interaction_id, now)
         _schedule_recheck(s, mother, a, now)
 
@@ -243,7 +243,7 @@ async def assess_facts(s: Session, mother: Mother, facts: list[Fact], interactio
     prev = rrepo.previous_assessment(s, mother.id, interaction_id)
     a = rules.assess(AssessmentInput(tuple(facts), profile_for(s, mother, now),
                                      frozenset(prev.rule_ids) if prev else frozenset()))  # fmt: skip
-    await ticket_service.apply_assessment(s, mother, a, now, live=False)
+    await ticket_service.apply_assessment(s, mother, a, now, live=False, interaction_id=interaction_id)
     _upsert_assessment(s, mother, interaction_id, a, Extracted(facts=facts), [], now)
     _schedule_recheck(s, mother, a, now)
     refresh_status(s, mother)

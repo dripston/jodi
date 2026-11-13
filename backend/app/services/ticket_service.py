@@ -7,7 +7,7 @@ assessment. Every step is a TicketEvent.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import partial
 
 from sqlmodel import Session, select
@@ -16,7 +16,6 @@ from app.core import deferred
 from app.core.config import get_settings
 from app.core.errors import DomainError
 from app.core.logging import log, mask_phone
-from app.core.time import ensure_utc
 from app.db.models import AshaTask, Mother, Ticket, TicketEvent
 from app.db.session import new_session
 from app.domain import escalation
@@ -34,17 +33,17 @@ def add_event(s: Session, t: Ticket, state: str, now: datetime, by: str = "syste
     s.add(TicketEvent(ticket_id=t.id, at=now, state=state, by=by, note=note))
 
 
-FAMILY_CALL_GAP = timedelta(seconds=45)  # only stops two calls colliding (two signs in one sentence)
-_FAMILY_CALL_NOTES = ("calling family", "family alert call")
+def _calling_note(interaction_id: str | None) -> str:
+    return f"calling family ({interaction_id})" if interaction_id else "calling family"
 
 
-def _family_called_recently(s: Session, t: Ticket, now: datetime) -> bool:
-    """One family call at a time: a call queued/placed/failed in the last 45 s blocks another."""
-    since = now - FAMILY_CALL_GAP
-    return any(
-        ev.note.startswith(_FAMILY_CALL_NOTES) and ev.at is not None and ensure_utc(ev.at) >= since
-        for ev in rrepo.ticket_events(s, t.id)
-    )
+def _family_called_this_call(s: Session, t: Ticket, interaction_id: str | None) -> bool:
+    """One family call per mother's call (two signs in one sentence must not ring twice). No time gap:
+    every new call that reports red rings the family again until they acknowledge."""
+    if not interaction_id:
+        return False
+    note = _calling_note(interaction_id)
+    return any(ev.note == note for ev in rrepo.ticket_events(s, t.id))
 
 
 def _asha_task(s: Session, mother: Mother, reason: str, now: datetime, ticket_id: str | None) -> None:
@@ -83,7 +82,9 @@ async def _notify_contact(s: Session, t: Ticket, mother: Mother, contact: str, n
     add_event(s, t, t.state, now, note=note)
 
 
-async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, live: bool) -> Ticket:
+async def _open(
+    s: Session, mother: Mother, a: RuleAssessment, now: datetime, live: bool, interaction_id: str | None = None
+) -> Ticket:
     t = Ticket(id=new_id("t"), mother_id=mother.id, subjects=a.subjects, level=a.overall_level,
                rule_ids=a.rule_ids, reason_text=a.reason_text, dismissed_by_family=a.dismissed_by_family,
                created_at=now, next_escalation_at=escalation.escalation_due_at(a.overall_level, now))  # fmt: skip
@@ -93,7 +94,7 @@ async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, li
     # (an unacknowledged amber ticket still escalates to the family later, see escalation_tick).
     first_family = _first_family(s, mother) if t.level == "red" else None
     if first_family:
-        add_event(s, t, t.state, now, note="calling family")
+        add_event(s, t, t.state, now, note=_calling_note(interaction_id))
     if mother.asha_id:
         await _notify_contact(s, t, mother, f"asha:{mother.asha_id}", now, live)
     escalation.check_transition("open", "notified")
@@ -151,7 +152,7 @@ def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> bool:
 
 
 async def _realert(s: Session, t: Ticket, mother: Mother, new_red: tuple[str, ...], now: datetime,
-                   live: bool, call: bool) -> None:  # fmt: skip
+                   live: bool, call: bool, interaction_id: str | None = None) -> None:  # fmt: skip
     """New red sign → ASHA + Telegram again. `call` → phone the family again too."""
     if new_red:
         add_event(s, t, t.state, now, note=f"new danger sign: {', '.join(new_red)}")
@@ -159,7 +160,7 @@ async def _realert(s: Session, t: Ticket, mother: Mother, new_red: tuple[str, ..
             await _notify_contact(s, t, mother, f"asha:{mother.asha_id}", now, live)
     contact = _first_family(s, mother) if call else None
     if contact:
-        add_event(s, t, t.state, now, note="calling family")
+        add_event(s, t, t.state, now, note=_calling_note(interaction_id))
     s.commit()
     job = partial(_contact_family_then_telegram, t.id, mother.id, contact, now, live, new_red)
     if not deferred.defer(job):
@@ -191,13 +192,15 @@ def close_if_resolved(s: Session, mother_id: str, level: str, now: datetime) -> 
             add_event(s, t, "closed", now, note=f"follow-up assessment {level} after reached")
 
 
-async def apply_assessment(s: Session, mother: Mother, a: RuleAssessment, now: datetime, live: bool) -> Ticket | None:
+async def apply_assessment(
+    s: Session, mother: Mother, a: RuleAssessment, now: datetime, live: bool, interaction_id: str | None = None
+) -> Ticket | None:
     """Create/update the mother's ticket from an assessment; may close a reached ticket."""
     close_if_resolved(s, mother.id, a.overall_level, now)
     t = rrepo.active_ticket(s, mother.id)
     if a.overall_level != "green":
         if t is None or (t.state == "reached" and a.overall_level == "red"):
-            t = await _open(s, mother, a, now, live)
+            t = await _open(s, mother, a, now, live, interaction_id)
         else:
             # A red sign not yet on this ticket (e.g. the baby now, after the mother earlier) is a new
             # emergency: alert the family and ASHA again. The same sign again stays quiet (deduped).
@@ -209,9 +212,9 @@ async def apply_assessment(s: Session, mother: Mother, a: RuleAssessment, now: d
                 mark_dismissed(s, t, now)
             # Red again while the family has not acknowledged: call them again (one call at a time).
             call = (a.overall_level == "red" and t.state in ("open", "notified")
-                    and not _family_called_recently(s, t, now))  # fmt: skip
+                    and not _family_called_this_call(s, t, interaction_id))  # fmt: skip
             if new_red or call:
-                await _realert(s, t, mother, new_red, now, live, call)
+                await _realert(s, t, mother, new_red, now, live, call, interaction_id)
             elif raised:
                 s.commit()
                 job = partial(_telegram_raised, t.id, mother.id, now)
