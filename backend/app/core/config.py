@@ -16,6 +16,7 @@ class Settings(BaseSettings):
         env_file=(str(REPO_ROOT / ".env"), str(BACKEND_DIR / ".env")),
         env_file_encoding="utf-8",
         extra="ignore",
+        env_ignore_empty=True,  # `SARVAM_OUTBOUND_URL=` (copied from .env.example) keeps the default
     )
 
     sarvam_api_key: str = ""
