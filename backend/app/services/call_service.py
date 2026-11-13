@@ -29,10 +29,8 @@ async def place_call(
     re-bound to Sarvam's real InteractionID when /hooks/on-start arrives)."""
     phone = target_phone or mother.phone
     role = "mother" if phone == mother.phone else "family"
-    variables = {
-        "call_direction": "outbound", "call_purpose": purpose, "callee_phone": phone,
-        "mother_id": mother.id, "language": mother.language,
-    }  # fmt: skip
+    # Only variables defined on the Sarvam agent: it rejects the whole call (422) for any other name.
+    variables = {"call_direction": "outbound", "call_purpose": purpose, "language": mother.language}
     placed = await get_integrations().call_placer.place_call(phone, purpose, variables)
     call = CallLog(interaction_id=placed.attempt_id, attempt_id=placed.attempt_id, mother_id=mother.id,
                    phone=phone, caller_role=role, purpose=purpose, direction="outbound",
