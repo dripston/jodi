@@ -347,6 +347,13 @@ All optional / additive; nothing existing was removed or renamed.
 - **`/hooks/on-start`** response: optional `previous_symptoms` (recent present symptoms, newest first, e.g. `"severe headache (yesterday)"`); also prefixed to `last_summary` as `"Recently reported symptoms: …"`.
 - **`POST /api/demo/reset?mode=clean`**: no pre-registered demo mother (onboard a real one live); default `mode=demo` keeps the previous behaviour.
 
+- **`GET /api/mothers/{id}/facilities?need=&limit=5`** → `{ need, options: [{ id, name, type, phone, distance_km, cost_band, open_24x7, availability, services, reasons[] }] }`, best first. `need` defaults from her open ticket (`emergency_mother` / `emergency_baby` / `emergency`, else `routine_checkup`).
+  - **Emergency ranking:** needed services and 24x7 → beds not full → distance band (≤5/10/20 km) → cost → distance.
+  - **Routine ranking:** services → beds → cost → distance.
+  - The first option is the one Jodi names and Telegram uses.
+  - `availability` is demo data until a live source exists.
+  - `Facility` gains `availability` (`available|limited|full|unknown`).
+
 ## 9. Telegram family channel (backend, 2026-11-13; additive)
 
 Telegram is an **extra** channel for families. Voice calls stay primary: a red alert always places the phone call / transfer and ASHA alert first, and Telegram is sent in addition (never the only alert). Messages carry status and instructions only (no transcripts, no full phone numbers), from fixed templates based on `docs/red-scripts.md`.

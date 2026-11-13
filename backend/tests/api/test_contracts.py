@@ -138,3 +138,17 @@ def test_caller_phone_formats_are_normalised(raw):
 
     assert AssessRiskIn(phone=raw, interaction_id="i").phone == "+917019142715"
     assert AssessRiskIn(phone="c150c4d0b39d", interaction_id="i").phone == "c150c4d0b39d"  # browser-test id
+
+
+def test_mother_facilities_ranked_with_reasons(client):
+    r = client.get("/api/mothers/m_001/facilities").json()
+    assert r["need"] == "routine_checkup" and r["options"]
+    client.post(
+        "/api/demo/inject", json={"mother_id": "m_001", "transcript": "User: ondu ghante alli batte poora odde aaytu"}
+    )
+    r = client.get("/api/mothers/m_001/facilities").json()
+    assert r["need"] == "emergency_mother"
+    top = r["options"][0]
+    assert top["name"] == "Bengaluru District Hospital (demo)" and top["open_24x7"]
+    assert top["reasons"][0].startswith("Can treat:") and any("demo data" in x for x in top["reasons"])
+    assert all(o["availability"] != "full" for o in r["options"][:1])

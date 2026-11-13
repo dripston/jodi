@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 def _facility(s: Session, mother: Mother, subjects: list[str]) -> str:
     need = "emergency_mother" if "mother" in subjects or not subjects else "emergency_baby"
-    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7)
+    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7,
+                              f.availability)
              for f in mrepo.list_facilities(s)]  # fmt: skip
     ranked = fac.rank(infos, need, mother.lat, mother.lng) or fac.rank(infos, "emergency", mother.lat, mother.lng)
     return ranked[0][0].name if ranked else "the nearest government hospital"

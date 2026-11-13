@@ -417,6 +417,26 @@ class RegisterIn(BaseModel):
         return normalize_phone(str(v)) if v else v
 
 
+class FacilityOptionOut(BaseModel):
+    id: str
+    name: str
+    type: str
+    phone: str
+    distance_km: float
+    cost_band: str
+    open_24x7: bool
+    availability: str  # available | limited | full | unknown (demo data)
+    services: list[str]
+    reasons: list[str]
+
+
+class FacilityOptionsOut(BaseModel):
+    """GET /api/mothers/{id}/facilities (additive): ranked hospitals, best first (the first is the one Jodi names)."""
+
+    need: str
+    options: list[FacilityOptionOut]
+
+
 class PlannedCallOut(BaseModel):
     """GET /api/mothers/{id}/planned-calls (additive): Jodi's upcoming and past scheduled calls."""
 

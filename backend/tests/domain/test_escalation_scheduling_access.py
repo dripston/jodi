@@ -160,11 +160,23 @@ F = [
 ]
 
 
-def test_emergency_ignores_cost_and_private():
+def test_emergency_capable_and_open_only_much_nearer_beats_free():
     ranked = facilities.rank(F, "emergency", 12.97, 77.59)
-    assert [f.id for f, _ in ranked] == ["f2"]
+    # PHC (no blood bank, not 24x7) excluded; the capable hospital 0 km away beats the free one ~14 km away
+    assert [f.id for f, _ in ranked] == ["f1", "f2"]
 
 
-def test_routine_services_then_distance_then_cost():
+def test_emergency_same_distance_band_free_first_and_full_last():
+    near_free = facilities.FacilityInfo("g", "Govt 3 km", "government", frozenset({"c_section", "blood_bank",
+                                        "newborn_care"}), 12.997, 77.59, "free", True, "available")  # fmt: skip
+    near_full = facilities.FacilityInfo("h", "Govt 1 km full", "government", frozenset({"c_section", "blood_bank",
+                                        "newborn_care"}), 12.979, 77.59, "free", True, "full")  # fmt: skip
+    opts = facilities.options([F[0], near_free, near_full], "emergency", 12.97, 77.59)
+    assert [o.facility.id for o in opts] == ["g", "f1", "h"]  # free beats private within ≤5 km; full beds last
+    assert opts[0].reasons[0] == "Can treat: blood bank, C-section, newborn care"
+    assert any("(demo data)" in r for r in opts[0].reasons)
+
+
+def test_routine_services_then_cost_then_distance():
     ranked = facilities.rank(F, "routine_checkup", 12.97, 77.59)
-    assert ranked[0][0].id == "f1" and ranked[1][0].id == "f3"
+    assert ranked[0][0].id == "f3" and ranked[1][0].id == "f1"  # free PHC before the high-cost private one

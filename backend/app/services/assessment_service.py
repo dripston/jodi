@@ -99,7 +99,8 @@ def _facility_name(s: Session, mother: Mother | None, a: rules.Assessment) -> st
     if a.overall_level != "red":
         return None
     need = "emergency_mother" if a.mother_level == "red" else "emergency_baby"
-    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7)
+    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7,
+                              f.availability)
              for f in mrepo.list_facilities(s)]  # fmt: skip
     lat, lng = (mother.lat, mother.lng) if mother else (12.97, 77.59)
     ranked = fac.rank(infos, need, lat, lng) or fac.rank(infos, "emergency", lat, lng)

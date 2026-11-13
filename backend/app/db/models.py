@@ -210,6 +210,7 @@ class Facility(SQLModel, table=True):
     phone: str = ""
     cost_band: str = "free"
     open_24x7: bool = False
+    availability: str = "unknown"  # available | limited | full | unknown (demo data)
 
 
 class ProcessedInteraction(SQLModel, table=True):

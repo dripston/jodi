@@ -331,7 +331,8 @@ def find_facility(s: Session, body: FindFacilityIn, now: datetime) -> FindFacili
     if mother is None:
         mother = mrepo.mother_by_phone(s, body.mother_phone)
     lat, lng = (mother.lat, mother.lng) if mother else (12.97, 77.59)
-    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7)
+    infos = [fac.FacilityInfo(f.id, f.name, f.type, frozenset(f.services), f.lat, f.lng, f.cost_band, f.open_24x7,
+                              f.availability)
              for f in mrepo.list_facilities(s)]  # fmt: skip
     ranked = fac.rank(infos, body.need, lat, lng)
     if not ranked:

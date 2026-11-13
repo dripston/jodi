@@ -21,6 +21,9 @@ ASHAS = [  # (id, name, phone, village)
 
 # (id, name, type, services, lat, lng, cost_band, open_24x7) — synthetic "(demo)" facilities
 _EMONC = ["labour_room", "c_section", "blood_bank", "newborn_care", "phototherapy", "postnatal_care"]
+# Demo bed availability (no live source yet); shown on the dashboard as "(demo data)".
+DEMO_AVAILABILITY = {"f_002": "limited", "f_010": "full"}
+
 FACILITIES: list[tuple[str, str, str, list[str], float, float, str, bool]] = [
     ("f_001", "Bengaluru District Hospital (demo)", "government", _EMONC, 12.9716, 77.5946, "free", True),
     ("f_002", "Bengaluru Maternity Hospital (demo)", "government", _EMONC, 12.9850, 77.5720, "free", True),
@@ -85,7 +88,8 @@ def seed(s: Session, now: datetime, with_demo_mother: bool = True) -> None:
                    phone=phones["asha"] if phone == "ASHA_PHONE" else phone, village=village))  # fmt: skip
     for fid, name, typ, services, lat, lng, cost, h24 in FACILITIES:
         s.add(Facility(id=fid, name=name, type=typ, services=services, lat=lat, lng=lng,
-                       phone=f"+918000000{fid[-3:]}", cost_band=cost, open_24x7=h24))  # fmt: skip
+                       phone=f"+918000000{fid[-3:]}", cost_band=cost, open_24x7=h24,
+                       availability=DEMO_AVAILABILITY.get(fid, "available" if h24 else "unknown")))  # fmt: skip
     s.commit()
 
     seeded: list[Mother] = []

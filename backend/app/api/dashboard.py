@@ -20,11 +20,12 @@ from app.schemas.api import (
     CallDetail,
     CallLogOut,
     EntryOut,
+    FacilityOptionsOut,
     FactOut,
     MotherDetail,
     MotherOut,
     OutboundMessageOut,
-    PlannedCallOut,  # noqa: E402
+    PlannedCallOut,
     RecentCall,
     StatsOut,
     StatusByDay,
@@ -121,6 +122,18 @@ def planned_calls(mother_id: str, s: Session = Depends(get_session)) -> list[Pla
         PlannedCallOut(id=c.id, day=c.day, due_at=iso(c.due_at), purpose=c.purpose, reason=c.reason, status=c.status)
         for c in s.exec(q)
     ]
+
+
+@router.get("/mothers/{mother_id}/facilities", response_model=FacilityOptionsOut)
+def mother_facilities(
+    mother_id: str, need: str | None = None, limit: int = 5, s: Session = Depends(get_session)
+) -> FacilityOptionsOut:
+    """Ranked hospitals for her. `need` defaults from her open ticket (mother red → emergency_mother,
+    baby red → emergency_baby, both → emergency), else routine_checkup."""
+    from app.services import facility_service
+
+    m = mrepo.get_mother(s, mother_id)
+    return facility_service.options_for(s, m, need, limit)
 
 
 @router.get("/mothers/{mother_id}/messages", response_model=list[OutboundMessageOut])
