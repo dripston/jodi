@@ -104,3 +104,14 @@ def test_place_call_and_recent(client):
 def test_unenrolled_stub_hidden_from_list(client):
     client.post("/api/onboarding/photo", files={"file": ("s.jpg", b"x", "image/jpeg")}, data={"phone": "+919811111111"})
     assert all(m["phone"] != "+919811111111" for m in client.get("/api/mothers").json())
+
+
+def test_missing_interaction_id_is_tolerated(client):
+    r = client.post(
+        "/hooks/on-start", headers=AUTH, json={"phone": "+919800000001", "interaction_id": None, "direction": "inbound"}
+    )
+    assert r.status_code == 200 and r.json()["mother_name"] == "Lakshmi"
+    r = client.post(
+        "/tools/assess-risk", headers=AUTH, json={"phone": "+919800000001", "transcript": "User: ella chennagide"}
+    )
+    assert r.status_code == 200 and r.json()["level"] == "green"

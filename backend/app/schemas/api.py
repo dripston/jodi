@@ -14,6 +14,16 @@ class Lenient(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    @field_validator("interaction_id", mode="before", check_fields=False)
+    @classmethod
+    def _iid(cls, v: Any) -> Any:
+        """Dashboard 'Send' tests and simulated calls may send no InteractionID: use a one-off id."""
+        if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
+            import uuid
+
+            return f"anon_{uuid.uuid4().hex[:10]}"
+        return v
+
 
 # ------------------------------------------------------------------ core models
 class FamilyPhone(BaseModel):
@@ -170,7 +180,7 @@ class OkOut(BaseModel):
 # -------------------------------------------------------------- hooks / tools
 class OnStartIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     direction: str | None = None
 
 
@@ -209,7 +219,7 @@ def _to_seconds(v: Any) -> int | None:
 
 class OnEndIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     transcript: str = ""
     duration_seconds: int | None = None
     variables: dict[str, Any] = Field(default_factory=dict)
@@ -236,7 +246,7 @@ class OnEndIn(Lenient):
 
 class AssessRiskIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     transcript: str = ""
     language: str | None = None  # additive: call language after a mid-call switch
 
