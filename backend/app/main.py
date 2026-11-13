@@ -67,8 +67,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
     setup_logging()
     app = FastAPI(title="Jodi backend", version="0.1.0", lifespan=lifespan)
-    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=True,
+    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
+                       allow_origin_regex=settings.cors_origin_regex or None, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"])  # fmt: skip
+    # Uptime checks (Render health check, UptimeRobot): GET or HEAD, no DB, no auth.
+    app.add_api_route("/health", lambda: {"ok": True}, methods=["GET", "HEAD"], include_in_schema=False)
     install_error_handlers(app)
     for r in (hooks.router, tools.router, dashboard.router, actions.router):
         app.include_router(r)

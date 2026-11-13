@@ -1,0 +1,65 @@
+# Render Blueprint: Jodi backend (FastAPI) as one Docker web service.
+# Dashboard -> New -> Blueprint -> pick this repo. Secrets (sync: false) are typed in on the first deploy.
+# ONE instance only: it runs the call scheduler and the Telegram poller (a second copy, e.g. a local
+# backend with the same bot token, makes Telegram return 409 Conflict and calls get placed twice).
+services:
+  - type: web
+    name: jodi-backend
+    runtime: docker
+    plan: free            # free sleeps after 15 min idle: keep it awake with UptimeRobot on /health
+    region: singapore     # closest Render region to India
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # --- fixed settings
+      - key: DEMO_MODE
+        value: "true"
+      - key: SARVAM_MOCK
+        value: "false"
+      - key: TELEGRAM_ENABLED
+        value: "true"
+      - key: TELEGRAM_MODE
+        value: polling
+      - key: TELEGRAM_MOCK
+        value: "false"
+      - key: CORS_ORIGIN_REGEX
+        value: https://.*\.vercel\.app
+      # --- set after the first deploy / once the Vercel URL is known
+      - key: PUBLIC_BASE_URL      # this service's own URL, e.g. https://jodi-backend.onrender.com
+        sync: false
+      - key: PUBLIC_APP_URL       # the Vercel dashboard URL (share links point here)
+        sync: false
+      # --- secrets (never commit)
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: SARVAM_AGENTS_API_KEY
+        sync: false
+      - key: SARVAM_ORG_ID
+        sync: false
+      - key: SARVAM_WORKSPACE_ID
+        sync: false
+      - key: SARVAM_AGENT_ID
+        sync: false
+      - key: SARVAM_AGENT_VERSION
+        sync: false
+      - key: SARVAM_FROM_NUMBER
+        sync: false
+      - key: SARVAM_CONNECTION_ID
+        sync: false
+      - key: TOOL_SHARED_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      # --- demo people (real phones live only here, never in git)
+      - key: DEMO_MOTHER_PHONE
+        sync: false
+      - key: DEMO_HUSBAND_PHONE
+        sync: false
+      - key: DEMO_ASHA_PHONE
+        sync: false
+      - key: DEMO_ASHA_NAME
+        sync: false

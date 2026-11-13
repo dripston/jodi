@@ -538,3 +538,10 @@ def test_share_tokens_are_letters_and_digits_only():
 
     toks = {_new_token() for _ in range(200)}
     assert len(toks) == 200 and all(t.isalnum() and t.isascii() and len(t) == 40 for t in toks)
+
+
+
+def test_health_answers_get_and_head_for_uptime_monitors(client):
+    for path in ("/health", "/api/health"):
+        assert client.get(path).json() == {"ok": True}
+        assert client.head(path).status_code == 200

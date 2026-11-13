@@ -39,7 +39,7 @@ from app.services.serializers import asha_out, baby_out, call_out, entry_out, mo
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, bool]:
     return {"ok": True}
 
