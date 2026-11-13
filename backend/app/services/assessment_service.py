@@ -181,6 +181,12 @@ async def assess_transcript(
 
     entries: list[Entry] = []
     ticket: Ticket | None = None
+    spoken = spoken_language(transcript)
+    if mother is not None and caller_role == "mother" and spoken and mother.language != spoken:
+        # Her latest spoken language becomes her language: the family-alert call, its script and
+        # the next scheduled calls all follow it (set before the ticket places any call).
+        log(logger, "mother language updated", mother_id=mother.id, old=mother.language, new=spoken)
+        mother.language = spoken
     if mother is not None:
         source, flags = _source_and_flags(caller_role)
         entries = record_service.save_facts(s, mother, ex.facts, source=source, now=now,
@@ -203,7 +209,7 @@ async def assess_transcript(
         script_ids, level = ["FAMILY-ALERT"], ticket.level
 
     # What the caller actually spoke beats the (possibly stale) language variable Sarvam sends.
-    lang = spoken_language(transcript) or language or (mother.language if mother else "kn")
+    lang = spoken or language or (mother.language if mother else "kn")
     say = render_scripts(script_ids, lang, mother.name if mother else None, _facility_name(s, mother, a))
     transfer = _transfer_to(s, mother, level, caller_phone, purpose, live)
     clarify = None

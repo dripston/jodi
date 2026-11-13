@@ -410,3 +410,19 @@ def test_new_red_sign_on_open_ticket_alerts_family_again(client, monkeypatch):
     assert sum(p[1] == "family_alert" for p in placed[n:]) == 2
     lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
     assert any("new danger sign" in h["note"] for h in lak["history"])
+
+
+def test_mother_speaks_hindi_so_husbands_alert_call_is_hindi(client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "family_contact", "call")
+    placed = get_integrations().call_placer.placed
+    n = len(placed)
+    r = assess(client, "User: मुझे हिंदी आती है\nUser: एक घंटे में पूरा पैड भीग गया, pad soaked within an hour", "int_hm")
+    assert r["level"] == "red" and r["say_verbatim"].startswith("सीधी लेट जाइए")  # mother hears Hindi
+    fam = [p for p in placed[n:] if p[1] == "family_alert"]
+    assert fam and fam[-1][2]["language"] == "hi"  # husband's call opens in Hindi
+    assert client.get("/api/mothers/m_001").json()["mother"]["language"] == "hi"
+    start(client, "int_hf", RAVI, "outbound")
+    r = assess(client, "Agent: Namaste\nUser: haan, boliye", iid="int_hf", phone=RAVI)  # romanised reply
+    assert r["say_verbatim"].startswith("नमस्कार, मैं जोडी बोल रही हूँ, Lakshmi")  # husband's script in Hindi
