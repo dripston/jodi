@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.errors import NotFound
 from app.db.models import Asha, AshaTask, Baby, Facility, FamilyContact, Mother
@@ -17,7 +17,8 @@ def get_mother(s: Session, mother_id: str) -> Mother:
 
 
 def list_mothers(s: Session) -> list[Mother]:
-    return list(s.exec(select(Mother).order_by(Mother.id)))
+    """Newest registration first (the dashboard opens on the mother just onboarded)."""
+    return list(s.exec(select(Mother).order_by(col(Mother.created_at).desc(), col(Mother.id))))
 
 
 def mother_by_phone(s: Session, phone: str) -> Mother | None:
