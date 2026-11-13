@@ -315,3 +315,25 @@ def test_demo_reset_keeps_telegram_links(client, tg):
     assert client.post("/api/demo/reset").status_code == 200
     assert client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED}).json()["level"] == "red"
     assert to_chat(tg, RAVI_CHAT)[-1]["text"].startswith("🔴 URGENT")  # still linked: no re-sharing needed
+
+
+def test_asha_chat_gets_her_mothers_alerts_and_can_acknowledge(client, tg):
+    asha_chat = 7009
+    send(client, text(asha_chat, "/start"), contact(asha_chat, "919800000009"))  # Sunita (a_001, Lakshmi's ASHA)
+    assert client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED}).json()["level"] == "red"
+    alert = to_chat(tg, asha_chat)[-1]
+    t = lakshmi_ticket()
+    assert alert["text"].startswith("🔴 URGENT") and alert["buttons"][0][0][1] == f"ack:{t.id}"
+    send(client, callback(asha_chat, f"ack:{t.id}"))
+    assert lakshmi_ticket().state == "acknowledged"
+
+
+def test_asha_chat_gets_nothing_for_other_ashas_mothers(client, tg):
+    other_chat = 7010
+    send(client, text(other_chat, "/start"), contact(other_chat, "919800000010"))  # Meena (a_002), not Lakshmi's
+    n = len(to_chat(tg, other_chat))
+    client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED})
+    assert len(to_chat(tg, other_chat)) == n
+    t = lakshmi_ticket()
+    send(client, callback(other_chat, f"ack:{t.id}"))
+    assert lakshmi_ticket().state != "acknowledged"

@@ -68,7 +68,8 @@ async def notify_ticket(s: Session, t: Ticket, mother: Mother, now: datetime, ev
                 f"alert:{t.id}:{t.level}" + (":" + "+".join(sorted(new_signs)) if new_signs else ""),
             )
         sent = 0
-        for link in tg.active_links(s, mother.id):
+        # Family + mother chats, and the mother's own ASHA (she may act on alerts for her mothers).
+        for link in [*tg.active_links(s, mother.id), *tg.asha_links(s, mother)]:
             msg = await tg.send_logged(s, link, text, "alert", now, buttons=messages.ticket_buttons(t.id),
                                        ticket_id=t.id, dedupe_key=key)  # fmt: skip
             sent += bool(msg and msg.delivered)
@@ -110,11 +111,16 @@ async def handle_ticket_callback(s: Session, link: TelegramLink | None, data: st
     from app.services import ticket_service
 
     action, _, ticket_id = data.partition(":")
-    if link is None or not link.active or not link.mother_id:
+    if link is None or not link.active or not (link.mother_id or link.role == "asha"):
         return "This chat is not linked to Jodi."
     t = s.get(Ticket, ticket_id)
-    if t is None or t.mother_id != link.mother_id:
+    mother = mrepo.get_mother(s, t.mother_id) if t is not None else None
+    is_her_asha = (
+        link.role == "asha" and mother is not None and any(x.chat_id == link.chat_id for x in tg.asha_links(s, mother))
+    )
+    if t is None or (t.mother_id != link.mother_id and not is_her_asha):
         return "This alert is not for this chat."
+    who = "asha" if is_her_asha else "family"
     try:
         if action == "ack":
             if t.state not in ("open", "notified"):
@@ -122,7 +128,7 @@ async def handle_ticket_callback(s: Session, link: TelegramLink | None, data: st
             ticket_service.acknowledge(s, t.id, f"telegram:{mask_phone(link.phone)}", "confirmed on Telegram", now)
             answer = "Thank you. Jodi has noted that you are on it."
         else:
-            ticket_service.mark_reached(s, t.id, "family:telegram", "family confirmed on Telegram", now)
+            ticket_service.mark_reached(s, t.id, f"{who}:telegram", f"{who} confirmed on Telegram", now)
             answer = "Thank you. Jodi has noted that she reached the hospital."
     except DomainError as exc:
         log(logger, "telegram ticket action refused", logging.INFO, ticket_id=t.id, error=exc.message)

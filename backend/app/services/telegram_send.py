@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 
 from app.core.config import get_settings
 from app.core.logging import log, redact_secrets
-from app.db.models import FamilyContact, OutboundMessage, TelegramLink
+from app.db.models import Asha, FamilyContact, Mother, OutboundMessage, TelegramLink
 from app.integrations.registry import get_integrations
 from app.integrations.telegram import Buttons
 from app.services.ids import new_id
@@ -77,3 +77,13 @@ def messages_for(s: Session, mother_id: str) -> list[OutboundMessage]:
 def active_links(s: Session, mother_id: str, roles: tuple[str, ...] = ("family", "mother")) -> list[TelegramLink]:
     q = select(TelegramLink).where(TelegramLink.mother_id == mother_id, TelegramLink.active == True)  # noqa: E712
     return [link for link in s.exec(q) if link.role in roles]
+
+
+def asha_links(s: Session, mother: Mother) -> list[TelegramLink]:
+    """Active Telegram chats of the mother's own ASHA (linked by the ASHA's phone)."""
+    asha = s.get(Asha, mother.asha_id) if mother.asha_id else None
+    if asha is None:
+        return []
+    q = select(TelegramLink).where(TelegramLink.role == "asha", TelegramLink.phone == asha.phone,
+                                   TelegramLink.active == True)  # noqa: E712  # fmt: skip
+    return list(s.exec(q))
