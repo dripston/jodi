@@ -470,3 +470,15 @@ def test_timeline_entries_have_levels(client):
     assess(client, "User: jvara illa", "int_lv2")
     tl2 = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_lv2"]
     assert tl2 and all(e["level"] == "green" for e in tl2 if e["kind"] in ("symptom", "vital"))
+
+
+def test_guard_drops_agent_quotes_and_unstated_stopping():
+    from app.services.assessment_service import _guard_facts
+
+    t = "Agent: the baby's weight was 2.6 kilograms.\nUser: Today afternoon a little bit, I will take it at night."
+    facts = [
+        {"subject": "baby", "code": "weight_grams", "present": True, "quote": "the baby's weight was 2.6 kilograms"},
+        {"subject": "mother", "code": "stopped_bp_medicine", "present": True,
+         "quote": "Today afternoon a little bit, I will take it at night"},
+    ]  # fmt: skip
+    assert _guard_facts(facts, t) == []

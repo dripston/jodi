@@ -10,6 +10,9 @@ You never diagnose, never give advice, and never decide danger levels. Fixed cli
    - Baby codes: {{BABY_CODES}}
    - `fits` exists for both. Use `subject` to say whose it is.
 3. `present: true` when the sign is reported; `present: false` for an explicit "no" ("no fever", "jvara illa", "bukhar nahi").
+   - A short "no" / "illa" / "nahi" / "nothing" / "not there" to an agent question that names several signs denies EACH of them: "Agent: any headache, blurred vision or swelling of face or hands? Caller: No, nothing" → headache_severe, vision_blurred and swelling_face_hands, each present=false. Do this for every question in the call, not only the last one.
+   - Normal answers are facts too: "fed three times, feeding well" → feeding_poor present=false; "cord is fine, nothing there" → cord_red_or_pus present=false; "feels normal" to a hot/cold question → feels_hot and feels_cold present=false.
+   - Medicines: `stopped_bp_medicine` / `stopped_iron` present=true ONLY when the caller says she stopped or is not taking it. "took a little this afternoon", "will take it at night", "taking it" are NOT stopping: emit present=false, or leave it out if unclear.
 4. `quote` = the caller's exact words for this fact (copy them; do not translate).
 5. Numbers: put the number in `numeric_value` and the unit in `unit`.
    - `pads_soaked_count`: number of pads/cloths ("batte", "kapda", "cloth") since morning; unit "pads".

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.domain.safety_net import BABY_WORDS
-from app.domain.transcript import caller_text
+from app.domain.transcript import AGENT_ROLES, caller_text, split_turns
 
 NUMBER_WORDS: dict[str, int] = {
     # Kannada
@@ -195,3 +195,60 @@ def extract(transcript: str) -> dict[str, Any]:
         "dismissal_detected": bool(DISMISSAL.search(text)),
         "needs_clarification": unclear,
     }
+
+
+# ------------------------------------------------- question → answer denials
+# Plain "no" / "normal" answers. Anchored at the start of the answer: "no, but she has fever" is caught below.
+_NO_ANSWER = re.compile(
+    r"^\W*(no+|nope|nothing|none|not\s+there|not\s+at\s+all|it'?s\s+not\s+there|it\s+is\s+not\s+there|"
+    r"illa+|ille|enu\s+illa|nahi+n?|nai|kuch\s+nahi|ಇಲ್ಲ|ಏನೂ\s+ಇಲ್ಲ|नहीं|कुछ\s+नहीं|"
+    r"(it\s+is|it'?s|all)\s+(fine|normal|ok(ay)?|good)|fine|normal|theek\s+hai|sab\s+theek|sari\s+ide|chennagide)(?!\w)",
+    re.IGNORECASE,
+)
+
+# What Jodi's QUESTIONS ask about (her wording, not the caller's), sign code and subject.
+QUESTION_TOPICS: list[tuple[str, str, str]] = [
+    (r"soaked\s+(with)?in\s+(an|one)\s+hour|pad.{0,30}soaked|ghante.{0,20}odde", "mother", "pad_soaked_within_hour"),
+    (r"\bclots?\b|gadde", "mother", "clots_large"),
+    (r"heavy\s+bleeding|bleeding\s+(a\s+lot|heavily)|bahut\s+khoon", "mother", "bleeding_heavy"),
+    (r"head\s*ache|sar\s*(mein\s+)?dard|tale\s*novu|tale\s+bhaara", "mother", "headache_severe"),
+    (r"blur|vision|lights?\s+in\s+front|kannu\s+manju|aankhon", "mother", "vision_blurred"),
+    (r"swelling|swollen|sooj|bandide", "mother", "swelling_face_hands"),
+    (r"\bfever\b|jvara|bukhar", "mother", "fever"),
+    (r"stitch|wound|taanke|holige", "mother", "wound_red_or_oozing"),
+    (r"breast|edhe", "mother", "breast_red_painful"),
+    (r"\bcalf\b|leg\s+pain|pindli", "mother", "calf_pain_swelling"),
+    (r"chest\s+pain|edhe\s+novu", "mother", "chest_pain"),
+    (r"foul|smell|vaasane|badboo", "mother", "discharge_foul"),
+    (r"palms?|soles?|hatheli|talve", "baby", "jaundice_palms_soles"),
+    (r"yellow|jaundice|haladi|peela", "baby", "jaundice_face_body"),
+    (r"umbilical|\bcord\b|hokkalu|naal", "baby", "cord_red_or_pus"),
+    (r"vomit|vaanti|ulti", "baby", "vomiting_everything"),
+    (r"\bhot\b|garam|bisi", "baby", "feels_hot"),
+    (r"\bcold\b|thanda", "baby", "feels_cold"),
+    (r"feeding\s+(properly|less|well)|feeding\s+less|drinking\s+less", "baby", "feeding_poor"),
+    (r"lethargic|moving\s+well|active", "baby", "lethargic"),
+    (r"\bfits\b|jerk|convuls|jhatke|daura", "mother", "fits"),
+]
+_TOPICS = [(re.compile(p, re.IGNORECASE), subject, code) for p, subject, code in QUESTION_TOPICS]
+
+
+def qa_denials(transcript: str) -> list[dict[str, Any]]:
+    """Jodi asks about named signs; a plain "no / nothing / normal" answer denies each of them.
+
+    Signs come from the QUESTION (Jodi's wording); the answer must not report a sign itself.
+    Counts and BP are never inferred from a "no".
+    """
+    turns = split_turns(transcript)
+    out: list[dict[str, Any]] = []
+    for (q_role, question), (a_role, answer) in zip(turns, turns[1:], strict=False):
+        if q_role not in AGENT_ROLES or a_role in AGENT_ROLES or not _NO_ANSWER.search(answer):
+            continue
+        if any(f["present"] for f in extract(f"User: {answer}")["facts"]):
+            continue  # "no, but she has fever": not a plain denial
+        baby_q = bool(_BABY.search(question))
+        for rx, subject, code in _TOPICS:
+            if rx.search(question):
+                subj = "baby" if (code == "fits" and baby_q) else subject
+                out.append(_fact(subj, code, answer, 0.8, present=False, value=f"no {code.replace('_', ' ')}"))
+    return _dedupe(out)

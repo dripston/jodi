@@ -129,3 +129,14 @@ def test_spoken_language_from_script():
     assert spoken_language("User: ondu ghante alli batte odde aaytu") is None  # romanised: keep call language
     # latest caller turn wins; Jodi's own Kannada line is ignored
     assert spoken_language("User: ನಮಸ್ಕಾರ\nAgent: ನಮಸ್ಕಾರ ನಾನು ಜೋಡಿ\nUser: मुझे हिंदी आती है") == "hi"
+
+
+def test_qa_denials_from_plain_no_answers():
+    from app.integrations.lexicon_extractor import qa_denials
+
+    t = ("Agent: Do you have a headache? Or blurred vision? Any swelling in your face or hands?\n"
+         "User: No, nothing.\nAgent: Do you have any fever?\nUser: No, it's not there.\n"
+         "Agent: Any fits?\nUser: No, but she has fever now.")  # fmt: skip
+    got = {(d["code"], d["present"]) for d in qa_denials(t)}
+    assert ("fever", False) in got and all(not p for _, p in got)
+    assert ("fits", False) not in got  # the answer reported something: not a plain denial

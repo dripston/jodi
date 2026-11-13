@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -28,7 +29,8 @@ from app.domain.labels import DEFAULT_CLARIFY, clarify_question
 from app.domain.rules import AssessmentInput, Profile
 from app.domain.script_choice import choose_scripts
 from app.domain.scripts import ScriptBook
-from app.domain.transcript import spoken_language
+from app.domain.transcript import caller_text, spoken_language
+from app.integrations import lexicon_extractor
 from app.integrations.registry import get_integrations
 from app.integrations.sarvam_llm import ExtractionError
 from app.repositories import mothers as mrepo
@@ -75,6 +77,39 @@ def profile_for(s: Session, mother: Mother | None, now: datetime) -> Profile:
     return Profile(tuple(mother.complications), day, float(day * 24))
 
 
+_STOP_WORDS = re.compile(
+    r"stop|not\s+tak|don'?t\s+tak|band\s+kar|chhod|chod\s+di|nilsi|nilisi|bittid|tagolta\s*illa|illa|nahi|nahin",
+    re.IGNORECASE,
+)
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"\w+", text.lower()))
+
+
+def _guard_facts(facts: list[dict[str, Any]], transcript: str) -> list[dict[str, Any]]:
+    """Deterministic checks on the LLM's facts (the rules engine trusts these, so be strict):
+    - a fact must come from the CALLER's words (its quote mostly found there), never from Jodi's lines;
+    - "stopped medicine" only with an explicit stop word ("will take it at night" is not stopping);
+    - plain "no" answers to Jodi's questions add present=false facts the LLM missed."""
+    said = _words(caller_text(transcript))
+    kept: list[dict[str, Any]] = []
+    for f in facts:
+        quote = _words(str(f.get("quote") or ""))
+        if quote and said and len(quote & said) / len(quote) < 0.6:
+            continue
+        if (
+            str(f.get("code", "")).startswith("stopped_")
+            and f.get("present")
+            and not _STOP_WORDS.search(str(f.get("quote") or ""))
+        ):
+            continue
+        kept.append(f)
+    have = {(f.get("subject"), f.get("code")) for f in kept}
+    kept += [d for d in lexicon_extractor.qa_denials(transcript) if (d["subject"], d["code"]) not in have]
+    return kept
+
+
 async def extract(transcript: str, interaction_id: str, context: str) -> Extracted:
     key = (interaction_id, hashlib.sha256(transcript.encode("utf-8")).hexdigest())
     raw = _CACHE.get(key)
@@ -86,7 +121,7 @@ async def extract(transcript: str, interaction_id: str, context: str) -> Extract
         _CACHE[key] = raw
         if len(_CACHE) > _CACHE_MAX:
             _CACHE.popitem(last=False)
-    v = validate_facts(list(raw.get("facts") or []))
+    v = validate_facts(_guard_facts(list(raw.get("facts") or []), transcript))
     if v.dropped:
         log(logger, "dropped unknown fact codes", logging.WARNING,
             codes=[d.get("code") for d in v.dropped], interaction_id=interaction_id)  # fmt: skip
