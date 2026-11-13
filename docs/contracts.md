@@ -340,3 +340,16 @@ All optional / additive; nothing existing was removed or renamed.
 - **§6 inject:** optional request field `interaction_id` (makes repeat injections idempotent).
 - **§6 ASHA list item:** optional `ticket_id`.
 - **§6 lists:** `/api/mothers` lists only enrolled mothers (with a delivery date); a stub created by a photo upload appears after onboarding is confirmed. `/api/calls/recent` lists calls linked to a mother. `CallLog.outcome` / `duration_seconds` are omitted (not null) while a call is in progress.
+
+## 9. Telegram family channel (backend, 2026-11-13; additive)
+
+Telegram is an **extra** channel for families. Voice calls stay primary: a red alert always places the phone call / transfer and ASHA alert first, and Telegram is sent in addition (never the only alert). Messages carry status and instructions only (no transcripts, no full phone numbers), from fixed templates based on `docs/red-scripts.md`.
+
+- **§4.10 `POST /hooks/telegram`** — Telegram webhook (mounted only when `TELEGRAM_ENABLED=true`, used when `TELEGRAM_MODE=webhook`). Requests must carry `X-Telegram-Bot-Api-Secret-Token: ${TELEGRAM_WEBHOOK_SECRET}` (else `401`). Body = a Telegram `Update`. Idempotent by `update_id`. Response `{ "ok": true }`. In the default `polling` mode the backend pulls updates itself and this route is unused.
+- **§6 `GET /api/mothers/{id}/messages`** → Telegram messages sent about this mother, newest first:
+  ```json
+  [{ "id": "msg_…", "kind": "alert", "chat_role": "husband", "text": "🔴 URGENT — …", "sent_at": "2026-11-13T09:13:00Z", "delivered": true, "ticket_id": "t_…" }]
+  ```
+  `kind` = `alert` | `status` | `onboarding` | `prescription` | `welcome`. `chat_role` = the family relation when known (`husband`, `mother_in_law`, …), else `mother` | `family` | `asha`. `delivered: false` means Telegram failed (the voice flow was unaffected).
+- **§2 Ticket `history[].by`** may now also be `telegram:+91 98•••• 0002` (acknowledged with the alert button; phone masked) or `family:telegram` (family tapped "We reached hospital").
+- Mothers registered by family on Telegram have `consent_at = null` until the mother gives her own spoken consent on her first voice call (`/hooks/on-start` returns `call_purpose = "onboarding"` for that call).

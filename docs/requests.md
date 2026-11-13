@@ -33,3 +33,9 @@ Format (append at the bottom, newest last):
 - Why: clinical rules and scripts are owned by the content owner.
 - Contract impact: none
 - Status: open
+
+## [2026-11-13 16:00] from backend to frontend
+- What: Telegram family channel is live in the backend (off by default). New `GET /api/mothers/{id}/messages` (contracts §9) to show "Telegram sent to husband ✓" on the live board, using `chat_role`, `delivered` and `ticket_id`. Ticket `history[].by` may be `telegram:+91 98•••• 0002` or `family:telegram`.
+- Why: show families acknowledging alerts from Telegram.
+- Contract impact: CONTRACT change in docs/contracts.md §9 (additive only)
+- Status: open
