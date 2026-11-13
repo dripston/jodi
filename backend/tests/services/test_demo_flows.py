@@ -111,7 +111,7 @@ def test_demo_checkin_is_amber_with_fixed_scripts(client):
 def test_red_bleed_reads_fixed_script_and_transfers(client):
     r = assess(client, "User: ondu ghante alli batte poora odde aaytu")
     assert r["level"] == "red" and r["rule_ids"] == ["M-BLEED-01"]
-    expected, _ = script_book().render("RED-BLEED", "kn", "Lakshmi", "Bengaluru District Hospital (demo)")
+    expected, _ = script_book().render("RED-BLEED", "kn", "Lakshmi", "Vani Vilas Women and Children Hospital")
     assert r["say_verbatim"] == expected
     assert r["transfer_to"] == RAVI and r["ticket_id"]
     t = client.get("/api/tickets?state=open").json()
@@ -394,7 +394,7 @@ def test_hindi_speech_gets_hindi_script_even_if_language_variable_says_kannada(c
     r = assess(client, "User: एक घंटे में पूरा पैड भीग गया, pad soaked within an hour", "int_hi", language="kn")
     assert r["level"] == "red"
     assert (
-        r["say_verbatim"] == script_book().render("RED-BLEED", "hi", "Lakshmi", "Bengaluru District Hospital (demo)")[0]
+        r["say_verbatim"] == script_book().render("RED-BLEED", "hi", "Lakshmi", "Vani Vilas Women and Children Hospital")[0]
     )
 
 

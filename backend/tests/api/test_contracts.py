@@ -149,6 +149,6 @@ def test_mother_facilities_ranked_with_reasons(client):
     r = client.get("/api/mothers/m_001/facilities").json()
     assert r["need"] == "emergency_mother"
     top = r["options"][0]
-    assert top["name"] == "Bengaluru District Hospital (demo)" and top["open_24x7"]
+    assert top["name"] == "Vani Vilas Women and Children Hospital" and top["open_24x7"]
     assert top["reasons"][0].startswith("Can treat:") and any("demo data" in x for x in top["reasons"])
     assert all(o["availability"] != "full" for o in r["options"][:1])

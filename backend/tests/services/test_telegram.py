@@ -196,7 +196,7 @@ def test_red_alert_call_first_then_telegram_with_buttons(client, tg):
     assert "Please call 108 immediately and go to" in alert["text"] and "pad soaked within an hour" in alert["text"]
     assert "+91" not in alert["text"] and "naalku" not in alert["text"]  # no phones, no transcript
     assert alert["buttons"] == [[("✅ I'm on it", f"ack:{t.id}")], [("🏥 We reached hospital", f"reached:{t.id}")]]
-    assert "Bengaluru District Hospital (demo)" in alert["text"]
+    assert "Vani Vilas Women and Children Hospital" in alert["text"]
     msgs = client.get("/api/mothers/m_001/messages").json()
     assert msgs[0]["kind"] == "alert" and msgs[0]["chat_role"] == "husband" and msgs[0]["delivered"]
 

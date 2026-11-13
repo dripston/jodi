@@ -1,6 +1,7 @@
 import type { HttpMethod } from '../client';
 import type { Level, Mother } from '../schemas';
 import { confirmOnboarding, runPipeline } from './pipeline';
+import { extraRoute } from './extras';
 import { DAY, HOUR, iso } from './seed';
 import { createState, LEVEL_RANK, maxLevel, verifyChain, type MockState } from './store';
 
@@ -113,6 +114,8 @@ type Body = Record<string, unknown>;
 const str = (b: unknown, k: string) => (typeof b === 'object' && b && typeof (b as Body)[k] === 'string' ? String((b as Body)[k]) : '');
 
 function route(method: HttpMethod, url: URL, body: unknown): unknown {
+  const extra = extraRoute(state, method, url, body);
+  if (extra !== undefined) return extra;
   const p = url.pathname;
   const seg = p.split('/').filter(Boolean);
   const mother = (id: string | undefined) => {

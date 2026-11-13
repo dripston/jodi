@@ -21,40 +21,44 @@ ASHAS = [  # (id, name, phone, village)
 
 # (id, name, type, services, lat, lng, cost_band, open_24x7) — synthetic "(demo)" facilities
 _EMONC = ["labour_room", "c_section", "blood_bank", "newborn_care", "phototherapy", "postnatal_care"]
-# Demo bed availability (no live source yet); shown on the dashboard as "(demo data)".
+# Real public hospitals (names and approximate locations). Their SERVICES and BED availability are demo
+# data until checked with the health department: the dashboard says so, and no phone numbers are invented.
+_GEN = ["labour_room", "c_section", "newborn_care", "postnatal_care"]
 DEMO_AVAILABILITY = {"f_002": "limited", "f_010": "full"}
 
 FACILITIES: list[tuple[str, str, str, list[str], float, float, str, bool]] = [
-    ("f_001", "Bengaluru District Hospital (demo)", "government", _EMONC, 12.9716, 77.5946, "free", True),
-    ("f_002", "Bengaluru Maternity Hospital (demo)", "government", _EMONC, 12.9850, 77.5720, "free", True),
-    ("f_003", "Jayanagar General Hospital (demo)", "government", _EMONC, 12.9300, 77.5830, "free", True),
-    ("f_004", "Yelahanka Taluk Hospital (demo)", "government", ["labour_room", "c_section", "newborn_care", "postnatal_care"], 13.1007, 77.5963, "free", True),
-    ("f_005", "Indiranagar PHC (demo)", "government", ["postnatal_care", "labour_room"], 12.9784, 77.6408, "free", False),
-    ("f_006", "Malleshwaram UPHC (demo)", "government", ["postnatal_care"], 13.0035, 77.5700, "free", False),
-    ("f_007", "Whitefield CHC (demo)", "government", ["labour_room", "newborn_care", "postnatal_care"], 12.9698, 77.7500, "free", True),
-    ("f_008", "Koramangala Mother & Child Clinic (demo)", "private", ["postnatal_care", "phototherapy", "newborn_care"], 12.9352, 77.6245, "medium", False),
-    ("f_009", "Hebbal Women's Hospital (demo)", "private", _EMONC, 13.0358, 77.5970, "high", True),
-    ("f_010", "Banashankari Nursing Home (demo)", "private", ["labour_room", "c_section", "postnatal_care"], 12.9255, 77.5468, "medium", True),
-    ("f_011", "Rajajinagar Children's Clinic (demo)", "private", ["newborn_care", "phototherapy"], 12.9910, 77.5520, "low", False),
-    ("f_012", "Electronic City PHC (demo)", "government", ["postnatal_care"], 12.8452, 77.6602, "free", False),
-    ("f_013", "Kalaburagi District Hospital (demo)", "government", _EMONC, 17.3297, 76.8343, "free", True),
-    ("f_014", "Kalaburagi Taluk PHC (demo)", "government", ["postnatal_care", "labour_room"], 17.3500, 76.8200, "free", False),
-    ("f_015", "Raichur District Hospital (demo)", "government", _EMONC, 16.2120, 77.3439, "free", True),
-    ("f_016", "Raichur Women's Clinic (demo)", "private", ["postnatal_care", "phototherapy"], 16.2050, 77.3550, "medium", False),
-    ("f_017", "Ballari District Hospital (demo)", "government", _EMONC, 15.1394, 76.9214, "free", True),
-    ("f_018", "Hosapete CHC (demo)", "government", ["labour_room", "newborn_care", "postnatal_care"], 15.2689, 76.3909, "free", True),
-    ("f_019", "Vijayapura District Hospital (demo)", "government", _EMONC, 16.8302, 75.7100, "free", True),
-    ("f_020", "Vijayapura PHC (demo)", "government", ["postnatal_care"], 16.8400, 75.7300, "free", False),
-    ("f_021", "Hubballi KIMS (demo)", "government", _EMONC, 15.3647, 75.1240, "free", True),
-    ("f_022", "Dharwad District Hospital (demo)", "government", _EMONC, 15.4589, 75.0078, "free", True),
-    ("f_023", "Hubballi Maternity Nursing Home (demo)", "private", ["labour_room", "c_section", "newborn_care"], 15.3500, 75.1400, "high", True),
-    ("f_024", "Belagavi District Hospital (demo)", "government", _EMONC, 15.8497, 74.4977, "free", True),
-    ("f_025", "Bidar District Hospital (demo)", "government", _EMONC, 17.9104, 77.5199, "free", True),
-    ("f_026", "Koppal District Hospital (demo)", "government", _EMONC, 15.3500, 76.1550, "free", True),
-    ("f_027", "Bagalkot District Hospital (demo)", "government", _EMONC, 16.1691, 75.6615, "free", True),
-    ("f_028", "Yadgir District Hospital (demo)", "government", _EMONC, 16.7700, 77.1376, "free", True),
-    ("f_029", "Gangavathi CHC (demo)", "government", ["labour_room", "newborn_care", "postnatal_care"], 15.4319, 76.5315, "free", True),
-    ("f_030", "Sindhanur PHC (demo)", "government", ["postnatal_care"], 15.7700, 76.7560, "free", False),
+    # Bengaluru
+    ("f_001", "Vani Vilas Women and Children Hospital", "government", _EMONC, 12.9590, 77.5745, "free", True),
+    ("f_002", "Bowring and Lady Curzon Hospital", "government", _EMONC, 12.9825, 77.6050, "free", True),
+    ("f_003", "Jayanagar General Hospital", "government", [*_GEN, "blood_bank"], 12.9255, 77.5905, "free", True),
+    ("f_004", "Yelahanka General Hospital", "government", _GEN, 13.1007, 77.5963, "free", True),
+    ("f_005", "C.V. Raman General Hospital", "government", _GEN, 12.9784, 77.6408, "free", True),
+    ("f_006", "K.C. General Hospital", "government", _EMONC, 13.0005, 77.5715, "free", True),
+    ("f_007", "HSIS Ghosha Hospital", "government", _GEN, 12.9857, 77.6037, "free", True),
+    ("f_008", "Indira Gandhi Institute of Child Health", "government", ["newborn_care", "phototherapy"], 12.9395, 77.5965, "free", True),
+    ("f_009", "Cloudnine Hospital, Jayanagar", "private", _EMONC, 12.9290, 77.5838, "high", True),
+    ("f_010", "Fortis La Femme, Richmond Road", "private", _EMONC, 12.9643, 77.6030, "high", True),
+    ("f_011", "Motherhood Hospital, Indiranagar", "private", _EMONC, 12.9716, 77.6412, "high", True),
+    ("f_012", "K.R. Puram General Hospital", "government", _GEN, 13.0050, 77.6960, "free", True),
+    ("f_014", "Victoria Hospital", "government", _EMONC, 12.9637, 77.5743, "free", True),
+    ("f_016", "Dasappa Hospital", "government", _GEN, 12.9764, 77.5770, "free", True),
+    ("f_018", "Sri Sathya Sai General Hospital, Whitefield", "government", _GEN, 12.9698, 77.7500, "free", True),
+    ("f_020", "ESIC Hospital, Rajajinagar", "government", _EMONC, 12.9893, 77.5536, "free", True),
+    ("f_023", "St. John's Medical College Hospital", "private", _EMONC, 12.9300, 77.6200, "medium", True),
+    ("f_029", "Manipal Hospital, Old Airport Road", "private", _EMONC, 12.9592, 77.6489, "high", True),
+    ("f_030", "Apollo Cradle, Jayanagar", "private", _EMONC, 12.9250, 77.5840, "high", True),
+    # District hospitals elsewhere in Karnataka
+    ("f_013", "District Hospital, Kalaburagi", "government", _EMONC, 17.3297, 76.8343, "free", True),
+    ("f_015", "District Hospital, Raichur", "government", _EMONC, 16.2120, 77.3439, "free", True),
+    ("f_017", "District Hospital, Ballari", "government", _EMONC, 15.1394, 76.9214, "free", True),
+    ("f_019", "District Hospital, Vijayapura", "government", _EMONC, 16.8302, 75.7100, "free", True),
+    ("f_021", "KIMS Hubballi", "government", _EMONC, 15.3647, 75.1240, "free", True),
+    ("f_022", "District Hospital, Dharwad", "government", _EMONC, 15.4589, 75.0078, "free", True),
+    ("f_024", "District Hospital, Belagavi", "government", _EMONC, 15.8497, 74.4977, "free", True),
+    ("f_025", "District Hospital, Bidar", "government", _EMONC, 17.9104, 77.5199, "free", True),
+    ("f_026", "District Hospital, Koppal", "government", _EMONC, 15.3500, 76.1550, "free", True),
+    ("f_027", "District Hospital, Bagalkot", "government", _EMONC, 16.1691, 75.6615, "free", True),
+    ("f_028", "District Hospital, Yadgir", "government", _EMONC, 16.7700, 77.1376, "free", True),
 ]  # fmt: skip
 
 
@@ -88,7 +92,7 @@ def seed(s: Session, now: datetime, with_demo_mother: bool = True) -> None:
                    phone=phones["asha"] if phone == "ASHA_PHONE" else phone, village=village))  # fmt: skip
     for fid, name, typ, services, lat, lng, cost, h24 in FACILITIES:
         s.add(Facility(id=fid, name=name, type=typ, services=services, lat=lat, lng=lng,
-                       phone=f"+918000000{fid[-3:]}", cost_band=cost, open_24x7=h24,
+                       phone="", cost_band=cost, open_24x7=h24,
                        availability=DEMO_AVAILABILITY.get(fid, "available" if h24 else "unknown")))  # fmt: skip
     s.commit()
 

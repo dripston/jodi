@@ -83,8 +83,8 @@ export function HospitalsTab({ motherId }: { motherId: string }) {
             ))}
           </ol>
           <p className="border-t border-border px-5 py-3 text-caption text-text-subtle">
-            Bed availability is demo data. In an emergency a much nearer hospital that can treat her always ranks above a
-            cheaper one further away.
+            Hospital services and bed availability are demo data: call the hospital to confirm. In an emergency a much
+            nearer hospital that can treat her always ranks above a cheaper one further away.
           </p>
         </>
       )}
