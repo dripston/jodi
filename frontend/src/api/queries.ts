@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type MotherFilters } from './endpoints';
-import type { CallPurpose, Ticket, TicketState } from './schemas';
+import type { CallPurpose, RegisterInput, Ticket, TicketState } from './schemas';
 
 const LIVE = { refetchInterval: 2000, staleTime: 1000 } as const;
 
@@ -21,6 +21,8 @@ export const queryKeys = {
   call: (id: string) => ['jodi', 'call', id] as const,
   stats: ['jodi', 'stats'] as const,
   statusByDay: ['jodi', 'stats', 'status-by-day'] as const,
+  plannedCalls: (id: string) => ['jodi', 'planned-calls', id] as const,
+  facilities: (id: string) => ['jodi', 'facilities', id] as const,
 };
 
 export const useMothers = (filters: MotherFilters = {}) =>
@@ -147,3 +149,14 @@ export const useDemoInject = () =>
     ({ motherId, callerPhone, transcript }: { motherId: string; callerPhone: string; transcript: string }) =>
       api.demoInject(motherId, callerPhone, transcript),
   );
+
+export const usePlannedCalls = (id: string) =>
+  useQuery({ queryKey: queryKeys.plannedCalls(id), queryFn: () => api.getPlannedCalls(id), ...LIVE });
+
+export const useFacilities = (id: string) =>
+  useQuery({ queryKey: queryKeys.facilities(id), queryFn: () => api.getFacilities(id), ...LIVE });
+
+export const useRegister = () => useInvalidatingMutation((input: RegisterInput) => api.register(input));
+
+export const useShareRecord = () =>
+  useInvalidatingMutation(({ motherId, by }: { motherId: string; by: string }) => api.shareRecord(motherId, by));

@@ -34,6 +34,7 @@ export const router = createBrowserRouter([
       { path: '/live', element: page(() => import('@/features/live/LiveBoardPage'), 'LiveBoardPage') },
       { path: '/ashas', element: page(() => import('@/features/asha/AshaIndexPage'), 'AshaIndexPage') },
       { path: '/asha/:id', element: page(() => import('@/features/asha/AshaListPage'), 'AshaListPage') },
+      { path: '/share/:token', element: page(() => import('@/features/share/SharePage'), 'SharePage') },
     ],
   },
 ]);

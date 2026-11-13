@@ -13,6 +13,12 @@ import {
   MotherSchema,
   OkSchema,
   OnboardingJobSchema,
+  PlannedCallSchema,
+  FacilityOptionsSchema,
+  ShareSchema,
+  ShareSessionSchema,
+  SharedRecordSchema,
+  type RegisterInput,
   StatsSchema,
   StatusByDaySchema,
   SummarySchema,
@@ -74,6 +80,18 @@ export const api = {
     request(OnboardingJobSchema, 'GET', `/api/onboarding/photo/${id(jobId)}`),
   startCall: (motherId: string, purpose: CallPurpose) =>
     request(CallStartedSchema, 'POST', '/api/calls', { mother_id: motherId, purpose }),
+  register: (input: RegisterInput) => request(MotherDetailSchema, 'POST', '/api/onboarding/register', input),
+  getPlannedCalls: (motherId: string) =>
+    request(z.array(PlannedCallSchema), 'GET', `/api/mothers/${id(motherId)}/planned-calls`),
+  getFacilities: (motherId: string, need?: string) =>
+    request(FacilityOptionsSchema, 'GET', `/api/mothers/${id(motherId)}/facilities${query({ need })}`),
+  shareRecord: (motherId: string, by: string) =>
+    request(ShareSchema, 'POST', `/api/mothers/${id(motherId)}/share`, { by }),
+  verifyShare: (token: string, code: string) =>
+    request(ShareSessionSchema, 'POST', `/api/share/${id(token)}/verify`, { code }),
+  resendShareCode: (token: string) => request(OkSchema, 'POST', `/api/share/${id(token)}/code`, {}),
+  getSharedRecord: (token: string, session: string) =>
+    request(SharedRecordSchema, 'GET', `/api/share/${id(token)}/record`, undefined, { 'X-Share-Session': session }),
   getRecentCalls: () => request(z.array(CallLogSchema), 'GET', '/api/calls/recent'),
   getCall: (interactionId: string) =>
     request(CallDetailSchema, 'GET', `/api/calls/${id(interactionId)}`),

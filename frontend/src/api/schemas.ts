@@ -214,6 +214,84 @@ export const OkSchema = z.object({ ok: z.boolean() });
 export const InjectResultSchema = z.object({ ok: z.boolean(), level: LevelSchema.nullish() });
 export const CallStartedSchema = z.object({ interaction_id: z.string() });
 
+/* ---------- care plan, hospitals, record sharing (contracts §8) ---------- */
+
+export const PlannedCallSchema = z.object({
+  id: z.string(),
+  day: z.number().nullable(),
+  due_at: z.string().nullable(),
+  purpose: z.string(),
+  reason: z.string(),
+  status: z.string(),
+});
+
+export const FacilityOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  phone: z.string(),
+  distance_km: z.number(),
+  cost_band: z.string(),
+  open_24x7: z.boolean(),
+  availability: z.string(),
+  services: z.array(z.string()),
+  reasons: z.array(z.string()),
+});
+export const FacilityOptionsSchema = z.object({ need: z.string(), options: z.array(FacilityOptionSchema) });
+
+export const ShareSchema = z.object({ url: z.string(), expires_at: z.string(), code_sent: z.boolean().default(true) });
+export const ShareSessionSchema = z.object({ session: z.string(), expires_at: z.string() });
+
+export const SharedRecordSchema = z.object({
+  mother: z.object({
+    name: z.string(),
+    delivery_date: z.string().nullable(),
+    delivery_type: z.string().nullable(),
+    complications: z.array(z.string()),
+    day_since_delivery: z.number().nullable(),
+    status: z.string(),
+    language: z.string(),
+  }),
+  baby: z.object({
+    birth_weight_grams: z.number().nullable(),
+    gestation_weeks: z.number().nullable(),
+    status: z.string().nullable(),
+  }),
+  alert: z
+    .object({ level: z.string(), reason: z.string(), rule_ids: z.array(z.string()), state: z.string() })
+    .nullable(),
+  danger_signs: z.array(
+    z.object({ at: z.string(), what: z.string(), source: z.string(), subject: z.string(), rule_ids: z.array(z.string()) }),
+  ),
+  medicines: z.array(z.object({ at: z.string(), what: z.string().nullable() })),
+  vitals: VitalsSchema,
+  record_verified: z.boolean(),
+  entries: z.number(),
+  generated_at: z.string().nullable(),
+});
+
+export interface FamilyInput {
+  name: string;
+  relation: string;
+  phone: string;
+  decision_maker: boolean;
+}
+
+export interface RegisterInput {
+  phone: string;
+  name: string;
+  language: string;
+  asha_id?: string;
+  delivery_date?: string;
+  delivery_type?: string;
+  family: FamilyInput[];
+}
+
+export type PlannedCall = z.infer<typeof PlannedCallSchema>;
+export type FacilityOption = z.infer<typeof FacilityOptionSchema>;
+export type FacilityOptions = z.infer<typeof FacilityOptionsSchema>;
+export type SharedRecord = z.infer<typeof SharedRecordSchema>;
+
 export type Subject = z.infer<typeof SubjectSchema>;
 export type Level = z.infer<typeof LevelSchema>;
 export type Source = z.infer<typeof SourceSchema>;

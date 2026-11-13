@@ -4,21 +4,23 @@ import type { Stage } from './useOnboardingFlow';
 
 const STEPS = [
   { title: 'Photograph the slip', detail: 'Discharge summary from the hospital' },
-  { title: 'Check what was read', detail: 'Low-confidence fields are marked' },
-  { title: 'Confirm by voice', detail: 'Jodi reads it back; she says yes' },
+  { title: 'Her details', detail: 'Name, language, ASHA, family' },
+  { title: 'Health record', detail: 'Created; calls planned' },
+  { title: 'First call', detail: 'Intro, her consent, first check-in' },
 ];
 
 function currentIndex(stage: Stage): number {
   if (stage === 'idle' || stage === 'reading') return 0;
   if (stage === 'review') return 1;
-  if (stage === 'calling') return 2;
-  return 3;
+  if (stage === 'registered') return 2;
+  if (stage === 'calling') return 3;
+  return 4;
 }
 
 export function OnboardSteps({ stage }: { stage: Stage }) {
   const current = currentIndex(stage);
   return (
-    <ol className="grid gap-px overflow-hidden rounded border border-border bg-border shadow-raised sm:grid-cols-3" aria-label="Onboarding steps">
+    <ol className="grid gap-px overflow-hidden rounded border border-border bg-border shadow-raised sm:grid-cols-4" aria-label="Onboarding steps">
       {STEPS.map((step, i) => {
         const done = i < current;
         const active = i === current;

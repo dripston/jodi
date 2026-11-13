@@ -14,7 +14,12 @@ export class ApiError extends Error {
   }
 }
 
-async function transport(method: HttpMethod, path: string, body?: unknown): Promise<unknown> {
+async function transport(
+  method: HttpMethod,
+  path: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<unknown> {
   if (env.useMock) {
     try {
       const { mockRequest } = await import('./mock/adapter');
@@ -30,7 +35,10 @@ async function transport(method: HttpMethod, path: string, body?: unknown): Prom
   try {
     response = await fetch(`${env.apiBase}${path}`, {
       method,
-      headers: isForm || body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: {
+        ...(isForm || body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...extraHeaders,
+      },
       body: isForm ? body : body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -47,8 +55,9 @@ export async function request<S extends z.ZodTypeAny>(
   method: HttpMethod,
   path: string,
   body?: unknown,
+  headers?: Record<string, string>,
 ): Promise<z.output<S>> {
-  const data = await transport(method, path, body);
+  const data = await transport(method, path, body, headers);
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     throw new ApiError('Unexpected response from the server', 200, path);

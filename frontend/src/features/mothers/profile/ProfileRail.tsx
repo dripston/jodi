@@ -6,6 +6,7 @@ import { ChainBadge } from '@/components/status/ChainBadge';
 import { Card, CardBody } from '@/components/ui/Card';
 import { formatAbsolute, formatWhen } from '@/lib/format';
 import { HearSummary } from './HearSummary';
+import { ShareRecord } from './ShareRecord';
 
 export function ProfileRail({ mother }: { mother: Mother }) {
   const tickets = useOpenTickets();
@@ -35,6 +36,9 @@ export function ProfileRail({ mother }: { mother: Mother }) {
           </div>
           <div className="border-t border-border pt-4">
             <HearSummary motherId={mother.id} />
+          </div>
+          <div className="border-t border-border pt-4">
+            <ShareRecord motherId={mother.id} />
           </div>
         </CardBody>
       </Card>
