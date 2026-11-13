@@ -463,3 +463,22 @@ def test_share_code_locks_after_five_wrong_tries_and_link_revokes(client, tg):
     assert client.post(f"/api/share/{token}/verify", json={"code": code2}).status_code == 200
     assert client.post(f"/api/share/{token}/revoke").status_code == 200
     assert client.post(f"/api/share/{token}/code").status_code == 403
+
+
+def test_slip_upload_with_unformatted_phone_lands_on_her_registered_record(client):
+    r = client.post(
+        "/api/onboarding/photo", data={"phone": "9800000001"}, files={"file": ("slip.jpg", b"fake-image", "image/jpeg")}
+    )
+    assert r.status_code == 200
+    body = {
+        "phone": "+919800000001",
+        "name": "Asha Test",
+        "language": "kn",
+        "delivery_date": "2026-11-12",
+        "delivery_type": "normal",
+        "family": [{"name": "H", "relation": "husband", "phone": "9800000002"}],
+    }
+    m = client.post("/api/onboarding/register", json=body).json()["mother"]
+    assert m["baby"] is not None  # embedded, never null
+    phones = [x["phone"] for x in client.get("/api/mothers").json()]
+    assert phones.count("+919800000001") == 1 and "9800000001" not in phones

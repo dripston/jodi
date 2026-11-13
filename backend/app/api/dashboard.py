@@ -73,7 +73,7 @@ def list_mothers(
 def get_mother(mother_id: str, s: Session = Depends(get_session), t: datetime = Depends(now)) -> MotherDetail:
     m = mrepo.get_mother(s, mother_id)
     baby = mrepo.baby_of(s, m.id)
-    return MotherDetail(mother=mother_out(s, m, t), baby=baby_out(baby) if baby else None)
+    return MotherDetail(mother=mother_out(s, m, t, embed=True), baby=baby_out(baby) if baby else None)
 
 
 @router.get("/mothers/{mother_id}/timeline", response_model=list[EntryOut])

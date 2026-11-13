@@ -394,7 +394,8 @@ def test_hindi_speech_gets_hindi_script_even_if_language_variable_says_kannada(c
     r = assess(client, "User: एक घंटे में पूरा पैड भीग गया, pad soaked within an hour", "int_hi", language="kn")
     assert r["level"] == "red"
     assert (
-        r["say_verbatim"] == script_book().render("RED-BLEED", "hi", "Lakshmi", "Vani Vilas Women and Children Hospital")[0]
+        r["say_verbatim"]
+        == script_book().render("RED-BLEED", "hi", "Lakshmi", "Vani Vilas Women and Children Hospital")[0]
     )
 
 

@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app.api.deps import now
 from app.core.time import iso
 from app.db.session import get_session
+from app.domain.access import normalize_phone
 from app.repositories import mothers as mrepo
 from app.schemas.api import (
     MotherDetail,
@@ -96,6 +97,7 @@ async def place_call(body: PlaceCallIn, s: Session = Depends(get_session), t: da
 async def onboarding_photo(
     file: UploadFile = File(...), phone: str = Form(...), s: Session = Depends(get_session), t: datetime = Depends(now),
 ) -> PhotoOut:  # fmt: skip
+    phone = normalize_phone(phone)  # same format as register/on-start, or the slip lands on a stub
     content = await file.read()
     return await onboarding_service.submit_photo(s, phone, file.filename or "slip.jpg", content,
                                                  file.content_type or "image/jpeg", t)  # fmt: skip
@@ -107,7 +109,7 @@ async def onboarding_register(
 ) -> MotherDetail:
     m = await onboarding_service.register(s, body, t)
     baby = mrepo.baby_of(s, m.id)
-    return MotherDetail(mother=mother_out(s, m, t), baby=baby_out(baby) if baby else None)
+    return MotherDetail(mother=mother_out(s, m, t, embed=True), baby=baby_out(baby) if baby else None)
 
 
 @router.get("/onboarding/photo/{job_id}", response_model=PhotoOut)

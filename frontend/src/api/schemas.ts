@@ -70,7 +70,7 @@ export const MotherSchema = z.object({
   status: LevelSchema,
   day_since_delivery: z.number(),
   // §6.1 list enrichments (optional)
-  baby: BabySchema.optional(),
+  baby: BabySchema.nullish().transform((v) => v ?? undefined),
   last_checkin_at: z.string().nullish(),
   next_call_at: z.string().nullish(),
 });
