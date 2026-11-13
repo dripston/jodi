@@ -354,6 +354,15 @@ All optional / additive; nothing existing was removed or renamed.
   - `availability` is demo data until a live source exists.
   - `Facility` gains `availability` (`available|limited|full|unknown`).
 
+- **Sharing her record with the treating doctor** (link + one-time code):
+  - `POST /api/mothers/{id}/share {by}` → `{ url, expires_at, code_sent }`. The code is never returned by the API; it goes to the family and her ASHA on Telegram with the link. Creating a new share revokes the previous one.
+  - `POST /api/tickets/{id}/reached` and the Telegram "We reached hospital" button now also create and send a share.
+  - `POST /api/share/{token}/verify {code}` → `{ session, expires_at }` (30 min). The code is valid 10 min, usable once, and allows 5 tries.
+  - `POST /api/share/{token}/code` re-sends a new code (max 3).
+  - `GET /api/share/{token}/record` with header `X-Share-Session` → `{ mother, baby, alert, danger_signs[], medicines[], vitals, record_verified, entries, generated_at }`. Read-only, with no phone numbers and no transcripts. Each view is logged in `AccessLog`, and the family is told once per session.
+  - `POST /api/share/{token}/revoke`.
+  - Link format: `{PUBLIC_APP_URL}/share/{token}`, valid 24 h. The frontend page `/share/:token` asks for the code, then shows the record.
+
 ## 9. Telegram family channel (backend, 2026-11-13; additive)
 
 Telegram is an **extra** channel for families. Voice calls stay primary: a red alert always places the phone call / transfer and ASHA alert first, and Telegram is sent in addition (never the only alert). Messages carry status and instructions only (no transcripts, no full phone numbers), from fixed templates based on `docs/red-scripts.md`.

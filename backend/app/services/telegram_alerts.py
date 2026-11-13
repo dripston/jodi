@@ -156,6 +156,9 @@ async def handle_ticket_callback(s: Session, link: TelegramLink | None, data: st
         else:
             ticket_service.mark_reached(s, t.id, f"{who}:telegram", f"{who} confirmed on Telegram", now)
             answer = "Thank you. Jodi has noted that she reached the hospital."
+            from app.services import share_service
+
+            await share_service.create(s, t.mother_id, f"{who}:telegram", now, ticket_id=t.id)
     except DomainError as exc:
         log(logger, "telegram ticket action refused", logging.INFO, ticket_id=t.id, error=exc.message)
         return "Already updated. Thank you."

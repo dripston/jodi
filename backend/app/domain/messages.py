@@ -55,6 +55,11 @@ TEMPLATES: dict[tuple[str, str], str] = {
         "🟢 Jodi check-in for {name} (day {day}): no danger signs reported today.\nNext Jodi call: {next_call}."
     ),
     ("ASHA_STATUS", "en"): "ASHA {asha}: your mothers today\n{lines}\nOpen the Jodi app for details.",
+    ("SHARE_CODE", "en"): (
+        "🏥 Show {name}'s Jodi record to the doctor treating her:\n{url}\n\n"
+        "One-time code: {code} (valid {minutes} minutes). Tell this code only to the doctor."
+    ),
+    ("SHARE_VIEWED", "en"): "👩‍⚕️ The doctor opened {name}'s Jodi record at {time}.",
     ("ASHA_STATUS_LINE", "en"): "{n}. {name}, day {day}: {status}{alert}",
     ("ASHA_STATUS_EMPTY", "en"): "ASHA {asha}: no mothers are assigned to you in Jodi yet.",
     ("STATUS_SUMMARY", "en"): (

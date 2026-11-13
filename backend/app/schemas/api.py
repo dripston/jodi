@@ -437,6 +437,27 @@ class FacilityOptionsOut(BaseModel):
     options: list[FacilityOptionOut]
 
 
+class ShareCreateIn(BaseModel):
+    by: str = "dashboard"
+
+
+class ShareOut(BaseModel):
+    """POST /api/mothers/{id}/share (additive). The code is never returned: it goes to the family on Telegram."""
+
+    url: str
+    expires_at: str
+    code_sent: bool = True
+
+
+class ShareVerifyIn(BaseModel):
+    code: str
+
+
+class ShareSessionOut(BaseModel):
+    session: str
+    expires_at: str
+
+
 class PlannedCallOut(BaseModel):
     """GET /api/mothers/{id}/planned-calls (additive): Jodi's upcoming and past scheduled calls."""
 

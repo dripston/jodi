@@ -4,22 +4,28 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
 from sqlmodel import Session
 
 from app.api.deps import now
+from app.core.time import iso
 from app.db.session import get_session
 from app.repositories import mothers as mrepo
 from app.schemas.api import (
     MotherDetail,
+    OkOut,
     PhotoOut,
     PlaceCallIn,
     PlaceCallOut,
     RegisterIn,
+    ShareCreateIn,
+    ShareOut,
+    ShareSessionOut,
+    ShareVerifyIn,
     TicketActionIn,
     TicketOut,
 )
-from app.services import call_service, onboarding_service, ticket_service
+from app.services import call_service, onboarding_service, share_service, ticket_service
 from app.services.serializers import baby_out, mother_out, ticket_out
 
 router = APIRouter(prefix="/api", tags=["actions"])
@@ -33,10 +39,51 @@ def ack(
 
 
 @router.post("/tickets/{ticket_id}/reached", response_model=TicketOut)
-def reached(
+async def reached(
     ticket_id: str, body: TicketActionIn, s: Session = Depends(get_session), t: datetime = Depends(now)
 ) -> TicketOut:
-    return ticket_out(s, ticket_service.mark_reached(s, ticket_id, body.by, body.note, t))
+    ticket = ticket_service.mark_reached(s, ticket_id, body.by, body.note, t)
+    await share_service.create(s, ticket.mother_id, f"dashboard:{body.by}", t, ticket_id=ticket.id)  # link + code
+    return ticket_out(s, ticket)
+
+
+@router.post("/mothers/{mother_id}/share", response_model=ShareOut)
+async def share_create(
+    mother_id: str, body: ShareCreateIn, s: Session = Depends(get_session), t: datetime = Depends(now)
+) -> ShareOut:
+    g = await share_service.create(s, mother_id, body.by, t)
+    return ShareOut(url=share_service.share_url(g.token), expires_at=iso(g.expires_at) or "")
+
+
+@router.post("/share/{token}/code", response_model=OkOut)
+async def share_resend(token: str, s: Session = Depends(get_session), t: datetime = Depends(now)) -> OkOut:
+    await share_service.resend_code(s, token, t)
+    return OkOut()
+
+
+@router.post("/share/{token}/verify", response_model=ShareSessionOut)
+async def share_verify(
+    token: str, body: ShareVerifyIn, s: Session = Depends(get_session), t: datetime = Depends(now)
+) -> ShareSessionOut:
+    session, until = await share_service.verify(s, token, body.code, t)
+    return ShareSessionOut(session=session, expires_at=iso(until) or "")
+
+
+@router.get("/share/{token}/record")
+async def share_record(
+    token: str,
+    x_share_session: str = Header(default=""),
+    s: Session = Depends(get_session),
+    t: datetime = Depends(now),
+) -> dict[str, object]:
+    """Read-only record for the doctor (header X-Share-Session from /verify)."""
+    return await share_service.record(s, token, x_share_session, t)
+
+
+@router.post("/share/{token}/revoke", response_model=OkOut)
+def share_revoke(token: str, s: Session = Depends(get_session)) -> OkOut:
+    share_service.revoke(s, token)
+    return OkOut()
 
 
 @router.post("/calls", response_model=PlaceCallOut)

@@ -200,6 +200,27 @@ class AccessLog(SQLModel, table=True):
     scope: str = "none"
 
 
+class ShareGrant(SQLModel, table=True):
+    """A private link + one-time code to show her record to the treating doctor."""
+
+    token: str = Field(primary_key=True)
+    mother_id: str = Field(index=True)
+    ticket_id: str | None = None
+    created_by: str = ""
+    created_at: datetime | None = _dt()
+    expires_at: datetime | None = _dt()
+    revoked: bool = False
+    otp_hash: str = ""
+    otp_expires_at: datetime | None = _dt()
+    otp_attempts: int = 0
+    otp_used: bool = False
+    otp_sends: int = 0
+    session_hash: str = ""
+    session_expires_at: datetime | None = _dt()
+    views: int = 0
+    last_session_notified: str = ""
+
+
 class Facility(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str

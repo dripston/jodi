@@ -401,3 +401,57 @@ def test_green_status_also_reaches_the_asha(client, tg):
         "/api/demo/inject", json={"mother_id": "m_001", "transcript": "User: ellaru chennagiddeve, yaava tondare illa"}
     )
     assert any(msg["text"].startswith("🟢") for msg in to_chat(tg, asha_chat))
+
+
+def _share_msg(tg, chat):
+    return next(m["text"] for m in reversed(to_chat(tg, chat)) if "One-time code" in m["text"])
+
+
+def test_reached_sends_share_link_and_code_doctor_sees_record(client, tg, clock):
+    import re
+
+    link_ravi(client, tg)
+    client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED})
+    t = lakshmi_ticket()
+    send(client, callback(RAVI_CHAT, f"reached:{t.id}"))  # family taps "We reached hospital"
+    text = _share_msg(tg, RAVI_CHAT)
+    url = re.search(r"https?://\S+/share/(\S+)", text)
+    code = re.search(r"code: (\d{6})", text).group(1)
+    token = url.group(1)
+    assert client.get(f"/api/share/{token}/record").status_code == 403  # no code yet
+    assert (
+        client.post(f"/api/share/{token}/verify", json={"code": "000000" if code != "000000" else "111111"}).status_code
+        == 403
+    )
+    r = client.post(f"/api/share/{token}/verify", json={"code": code})
+    assert r.status_code == 200
+    session = r.json()["session"]
+    rec = client.get(f"/api/share/{token}/record", headers={"X-Share-Session": session})
+    assert rec.status_code == 200
+    body = rec.json()
+    assert body["mother"]["name"] == "Lakshmi" and body["record_verified"] is True
+    assert body["alert"]["level"] == "red" and body["danger_signs"]
+    assert "+91" not in rec.text  # no phone numbers in the doctor's view
+    assert "doctor opened" in to_chat(tg, RAVI_CHAT)[-1]["text"]  # family told
+    assert client.post(f"/api/share/{token}/verify", json={"code": code}).status_code == 403  # one-time
+    clock.advance(minutes=31)
+    assert client.get(f"/api/share/{token}/record", headers={"X-Share-Session": session}).status_code == 403
+
+
+def test_share_code_locks_after_five_wrong_tries_and_link_revokes(client, tg):
+    import re
+
+    link_ravi(client, tg)
+    r = client.post("/api/mothers/m_001/share", json={"by": "asha"})
+    assert r.status_code == 200 and "code" not in r.json()  # the code never comes back in the API
+    token = r.json()["url"].rsplit("/", 1)[-1]
+    code = re.search(r"code: (\d{6})", _share_msg(tg, RAVI_CHAT)).group(1)
+    wrong = "123456" if code != "123456" else "654321"
+    for _ in range(5):
+        assert client.post(f"/api/share/{token}/verify", json={"code": wrong}).status_code == 403
+    assert client.post(f"/api/share/{token}/verify", json={"code": code}).status_code == 403  # locked
+    assert client.post(f"/api/share/{token}/code").status_code == 200  # family asks for a new code
+    code2 = re.search(r"code: (\d{6})", _share_msg(tg, RAVI_CHAT)).group(1)
+    assert client.post(f"/api/share/{token}/verify", json={"code": code2}).status_code == 200
+    assert client.post(f"/api/share/{token}/revoke").status_code == 200
+    assert client.post(f"/api/share/{token}/code").status_code == 403

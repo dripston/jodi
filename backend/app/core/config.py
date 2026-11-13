@@ -64,7 +64,9 @@ class Settings(BaseSettings):
     demo_mother_phone: str = ""  # phone A (Lakshmi)
     demo_husband_phone: str = ""  # phone B (Ravi)
     demo_asha_phone: str = ""  # phone C (ASHA Sunita)
-    demo_asha_name: str = ""  # the real ASHA's name for phone C (empty = "Sunita")
+    demo_asha_name: str = ""
+    # Where the dashboard runs; share links are {public_app_url}/share/{token}.
+    public_app_url: str = "http://localhost:5173"  # the real ASHA's name for phone C (empty = "Sunita")
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'jodi.db').as_posix()}"
     scheduler_enabled: bool = True
