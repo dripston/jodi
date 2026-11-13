@@ -156,6 +156,15 @@ def spoken_phone(phone: str) -> str:
 
 
 def onboarding_readback(fields: dict[str, Any]) -> str:
+    summary = onboarding_summary(fields)
+    if not summary:
+        return "I did not catch the details. Could you tell me the delivery date and type again?"
+    return ("I heard: " + summary + ". Do you agree that Jodi keeps your and your baby's "
+            "health record and shares it only with your family and ASHA, and shall I save this?")  # fmt: skip
+
+
+def onboarding_summary(fields: dict[str, Any]) -> str:
+    """The details in plain words, e.g. "delivery on 12 November; C-section; baby 2.6 kilograms at birth"."""
     parts: list[str] = []
     if d := fields.get("delivery_date"):
         dd = date.fromisoformat(d)
@@ -173,7 +182,4 @@ def onboarding_readback(fields: dict[str, Any]) -> str:
     if fam := fields.get("family_contact"):
         who = ", ".join(x for x in (fam.get("name"), fam.get("relation")) if x)
         parts.append(f"family contact {who}, number {spoken_phone(fam['phone'])}")
-    if not parts:
-        return "I did not catch the details. Could you tell me the delivery date and type again?"
-    return ("I heard: " + "; ".join(parts) + ". Do you agree that Jodi keeps your and your baby's "
-            "health record and shares it only with your family and ASHA, and shall I save this?")  # fmt: skip
+    return "; ".join(parts)

@@ -502,3 +502,35 @@ def test_register_places_the_first_call_straight_away(client):
     body["call_now"] = False
     client.post("/api/onboarding/register", json={**body, "phone": "+919833333333"})
     assert len(placed) == n + 1
+
+
+def test_registered_mother_first_call_never_reasks_and_one_yes_records_consent(client):
+    from tests.conftest import AUTH
+
+    body = {"phone": "+919811111111", "name": "Rekha", "language": "kn", "delivery_date": "2026-11-12",
+            "delivery_type": "c_section", "family": [{"name": "Suresh", "relation": "husband", "phone": "9822222222"}],
+            "call_now": False}  # fmt: skip
+    mid = client.post("/api/onboarding/register", json=body).json()["mother"]["id"]
+    ctx = client.post(
+        "/hooks/on-start",
+        headers=AUTH,
+        json={"phone": "+919811111111", "interaction_id": "fc1", "direction": "outbound"},
+    ).json()
+    assert ctx["call_purpose"] == "onboarding"
+    assert ctx["last_summary"].startswith("Already registered") and "C-section" in ctx["last_summary"]
+    assert "Do NOT ask" in ctx["last_summary"]
+    pend = client.post(
+        "/tools/onboarding-save",
+        headers=AUTH,
+        json={"phone": "+919811111111", "interaction_id": "fc1", "transcript": "User: haan"},
+    ).json()
+    assert pend["pending_id"] and "delivery on 12 November" in pend["readback_text"]  # read back, not asked
+    assert "Suresh" in pend["readback_text"]
+    assert client.post("/tools/confirm-update", headers=AUTH, json={"pending_id": pend["pending_id"]}).json()["saved"]
+    assert client.get(f"/api/mothers/{mid}").json()["mother"]["consent_at"] is not None
+    ctx = client.post(
+        "/hooks/on-start",
+        headers=AUTH,
+        json={"phone": "+919811111111", "interaction_id": "fc2", "direction": "outbound"},
+    ).json()
+    assert ctx["call_purpose"] != "onboarding"  # never onboarded again

@@ -105,6 +105,32 @@ def _photo_fields(s: Session, mother_id: str) -> dict[str, Any]:
     return {k: v for k, v in job.fields.items() if k != "confidence" and v not in (None, [], "")}
 
 
+def registered_fields(s: Session, mother: Mother) -> dict[str, Any]:
+    """What her record already holds (from the slip and the ASHA's form), in onboarding-field shape."""
+    baby = mrepo.baby_of(s, mother.id)
+    f: dict[str, Any] = {}
+    if mother.delivery_date:
+        f["delivery_date"] = mother.delivery_date.isoformat()
+    if mother.delivery_type:
+        f["delivery_type"] = mother.delivery_type
+    if mother.complications:
+        f["complications"] = list(mother.complications)
+    if baby and baby.birth_weight_grams:
+        f["baby_birth_weight_grams"] = baby.birth_weight_grams
+    if baby and baby.gestation_weeks:
+        f["gestation_weeks"] = baby.gestation_weeks
+    if meds := _photo_fields(s, mother.id).get("medicines"):
+        f["medicines"] = normalize_medicines(meds)
+    dm = next((c for c in mrepo.family_of(s, mother.id) if c.decision_maker), None)
+    if dm:
+        f["family_contact"] = {"name": dm.name, "relation": dm.relation, "phone": dm.phone}
+    return f
+
+
+def is_registered_awaiting_consent(mother: Mother) -> bool:
+    return mother.onboarded_at is not None and mother.consent_at is None
+
+
 async def onboarding_save(s: Session, body: OnboardingSaveIn, now: datetime) -> PendingOut:
     if not body.phone:  # no caller number (dashboard test): read back, but never create a phoneless mother
         try:
@@ -113,7 +139,8 @@ async def onboarding_save(s: Session, body: OnboardingSaveIn, now: datetime) -> 
             voice = {}
         return PendingOut(pending_id=None, readback_text=onboarding_readback(voice))
     mother = ensure_mother(s, body.phone, now)
-    photo = _photo_fields(s, mother.id)
+    # Already registered (slip + ASHA form): read back what the record holds; only spoken corrections are new.
+    photo = registered_fields(s, mother) if is_registered_awaiting_consent(mother) else _photo_fields(s, mother.id)
     try:
         voice = await get_integrations().extractor.extract_onboarding(body.transcript, ist_today(now))
     except ExtractionError:

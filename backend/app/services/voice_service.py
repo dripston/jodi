@@ -17,6 +17,7 @@ from app.domain import access
 from app.domain import facilities as fac
 from app.domain.labels import describe_facts, join_words
 from app.domain.transcript import caller_text
+from app.domain.updates import onboarding_summary
 from app.repositories import mothers as mrepo
 from app.repositories import records as rrepo
 from app.schemas.api import (
@@ -30,7 +31,14 @@ from app.schemas.api import (
     ReadSummaryIn,
     ReadSummaryOut,
 )
-from app.services import asha_service, assessment_service, call_service, record_service, ticket_service
+from app.services import (
+    asha_service,
+    assessment_service,
+    call_service,
+    onboarding_service,
+    record_service,
+    ticket_service,
+)
 
 logger = logging.getLogger(__name__)
 _AFFIRM = re.compile(r"(?<!\w)(yes|haudu|houdu|haan|haa|sari|okay|ok|confirm(ed)?|on it)(?!\w)", re.IGNORECASE)
@@ -142,6 +150,10 @@ def _mother_context(s: Session, m: Mother, role: str, purpose: str, now: datetim
         [f"Last call: {last}"] if last else []
     )
     last = " ".join(parts)
+    if purpose == "onboarding" and onboarding_service.is_registered_awaiting_consent(m):
+        known = onboarding_summary(onboarding_service.registered_fields(s, m))
+        last = (f"Already registered from her discharge slip and her ASHA: {known}. Do NOT ask for these details "
+                "again; read them back once with onboarding_save for her confirmation and consent.")  # fmt: skip
     t = rrepo.active_ticket(s, m.id)
     return OnStartOut(
         caller_role=role, call_purpose=purpose, language=m.language, mother_name=m.name,
