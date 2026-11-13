@@ -148,3 +148,21 @@ def test_webhook_connected_binds_interaction_and_assesses(client):
     r = client.post("/hooks/on-end", headers=AUTH, json={"phone": "", "interaction_id": "int_from_webhook",
                                                          "transcript": "x", "answered": True})  # fmt: skip
     assert r.status_code == 200
+
+
+async def test_llm_attempts_share_one_time_budget(monkeypatch):
+    import time
+
+    calls = []
+
+    def handler(request):
+        calls.append(time.perf_counter())
+        raise httpx.ReadTimeout("slow", request=request)
+
+    _patch_httpx(monkeypatch, handler)
+    from app.integrations import sarvam_llm
+
+    s = SETTINGS.model_copy(update={"llm_retries": 5, "llm_budget_s": 0.5, "llm_timeout_s": 6.0})
+    with pytest.raises(sarvam_llm.ExtractionError):
+        await sarvam_llm.SarvamExtractor(s).extract("User: test", "ctx")
+    assert len(calls) <= 1  # less than 1 s left after the first try: no retry beyond the budget

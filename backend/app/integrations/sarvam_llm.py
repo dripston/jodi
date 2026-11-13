@@ -130,10 +130,16 @@ class SarvamExtractor:
         }  # fmt: skip
         headers = {"api-subscription-key": self._s.sarvam_api_key, "Content-Type": "application/json"}
         last: Exception | None = None
+        # Sarvam drops a tool call after ~10 s, so all attempts together get one budget: a retry only uses
+        # what is left of it (the safety net and fixed scripts still answer if extraction fails).
+        deadline = time.perf_counter() + self._s.llm_budget_s
         for attempt in range(self._s.llm_retries + 1):
             started = time.perf_counter()
+            remaining = deadline - started
+            if remaining < 1.0:
+                break
             try:
-                async with httpx.AsyncClient(timeout=self._s.llm_timeout_s) as client:
+                async with httpx.AsyncClient(timeout=min(self._s.llm_timeout_s, remaining)) as client:
                     resp = await client.post(self._s.sarvam_llm_url, json=body, headers=headers)
                 resp.raise_for_status()
                 content = resp.json()["choices"][0]["message"]["content"]

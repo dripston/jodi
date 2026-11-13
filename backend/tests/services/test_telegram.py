@@ -534,3 +534,28 @@ def test_registered_mother_first_call_never_reasks_and_one_yes_records_consent(c
         json={"phone": "+919811111111", "interaction_id": "fc2", "direction": "outbound"},
     ).json()
     assert ctx["call_purpose"] != "onboarding"  # never onboarded again
+
+
+def test_registered_onboarding_save_answers_fast_even_if_the_ai_hangs(client, monkeypatch):
+    import asyncio
+    import time
+
+    from app.integrations.registry import get_integrations
+    from tests.conftest import AUTH
+
+    async def hang(*_a, **_k):
+        await asyncio.sleep(30)
+
+    body = {"phone": "+919811111111", "name": "Rekha", "language": "kn", "delivery_date": "2026-11-12",
+            "delivery_type": "normal", "family": [{"name": "S", "relation": "husband", "phone": "9822222222"}],
+            "call_now": False}  # fmt: skip
+    client.post("/api/onboarding/register", json=body)
+    monkeypatch.setattr(get_integrations().extractor, "extract_onboarding", hang)
+    t0 = time.perf_counter()
+    r = client.post(
+        "/tools/onboarding-save",
+        headers=AUTH,
+        json={"phone": "+919811111111", "interaction_id": "slow1", "transcript": "User: haan"},
+    )
+    assert r.status_code == 200 and r.json()["pending_id"]  # the read-back of her record still comes back
+    assert time.perf_counter() - t0 < 5  # well inside Sarvam's ~10 s tool limit

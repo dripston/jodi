@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     # timeouts (seconds)
     llm_timeout_s: float = 6.0
     llm_retries: int = 1
+    llm_budget_s: float = 7.0  # all LLM attempts for one tool call together (Sarvam tool limit ~10 s)
     outbound_timeout_s: float = 10.0
     outbound_retries: int = 2
     docai_max_wait_s: float = 60.0

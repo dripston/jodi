@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -139,11 +140,14 @@ async def onboarding_save(s: Session, body: OnboardingSaveIn, now: datetime) -> 
             voice = {}
         return PendingOut(pending_id=None, readback_text=onboarding_readback(voice))
     mother = ensure_mother(s, body.phone, now)
-    # Already registered (slip + ASHA form): read back what the record holds; only spoken corrections are new.
-    photo = registered_fields(s, mother) if is_registered_awaiting_consent(mother) else _photo_fields(s, mother.id)
+    # Already registered (slip + ASHA form): read back what the record holds; only spoken corrections are new,
+    # so the AI read gets a short budget and the read-back never waits on it (Sarvam drops slow tools).
+    registered = is_registered_awaiting_consent(mother)
+    photo = registered_fields(s, mother) if registered else _photo_fields(s, mother.id)
     try:
-        voice = await get_integrations().extractor.extract_onboarding(body.transcript, ist_today(now))
-    except ExtractionError:
+        read = get_integrations().extractor.extract_onboarding(body.transcript, ist_today(now))
+        voice = await (asyncio.wait_for(read, REGISTERED_READ_BUDGET_S) if registered else read)
+    except (ExtractionError, TimeoutError):
         voice = {}
     fields = {**photo, **voice}
     sources = {k: ("mother_reported" if k in voice else "document_extracted") for k in fields}
@@ -199,6 +203,8 @@ async def first_call(mother_id: str, now: datetime) -> None:
     except Exception as exc:  # noqa: BLE001 - the record is saved; the dashboard can retry the call
         log(logger, "first call failed", logging.WARNING, mother_id=mother_id, error=type(exc).__name__)
 
+
+REGISTERED_READ_BUDGET_S = 3.5
 
 SLIP_FIELDS = {"delivery_date", "delivery_type", "complications", "baby_birth_weight_grams", "gestation_weeks",
                "medicines"}  # fmt: skip
