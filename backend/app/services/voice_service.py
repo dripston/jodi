@@ -86,13 +86,16 @@ def on_start(s: Session, body: OnStartIn, now: datetime) -> OnStartOut:
     awaiting_own_consent = (
         mother is not None and role == "mother" and mother.onboarded_at is not None and mother.consent_at is None
     )
-    if awaiting_own_consent:
-        purpose = "onboarding"  # registered by family on Telegram: her own spoken consent comes first
+    # Onboarding (intro + her own consent) happens only on a call Jodi places. When SHE calls in, it may
+    # be an emergency: no intro, straight to "what is happening?" (inbound playbook).
+    outbound = call.direction == "outbound"
+    if awaiting_own_consent and outbound:
+        purpose = "onboarding"  # registered on the dashboard or by family on Telegram: her consent comes first
     elif call.mother_id:
         purpose = call.purpose
     elif ident.role == "asha":
         purpose = "asha"
-    elif ident.role == "mother" and mother and mother.onboarded_at is None:
+    elif ident.role == "mother" and mother and mother.onboarded_at is None and outbound:
         purpose = "onboarding"
     else:
         purpose = "inbound"

@@ -151,9 +151,11 @@ def test_family_onboarding_end_to_end(client, tg):
     assert client.get(f"/api/mothers/{mother_id}").json()["mother"]["day_since_delivery"] == 1
     assert client.get(f"/api/mothers/{mother_id}/audit").json()["valid"]
     ctx = client.post(
-        "/hooks/on-start", headers=AUTH, json={"phone": "+919822222222", "interaction_id": "int_div"}
+        "/hooks/on-start",
+        headers=AUTH,
+        json={"phone": "+919822222222", "interaction_id": "int_div", "direction": "outbound"},
     ).json()
-    assert ctx["call_purpose"] == "onboarding"  # first voice call still asks the mother's own consent
+    assert ctx["call_purpose"] == "onboarding"  # Jodi's first call to her still asks her own consent
 
 
 def test_onboarding_skip_photo_and_born_early(client, tg):
@@ -387,8 +389,14 @@ def test_clean_start_register_real_mother_rebinds_family_telegram(client, tg):
     planned = client.get(f"/api/mothers/{m['id']}/planned-calls").json()
     assert planned and all(c["status"] == "pending" for c in planned)
 
-    ctx = client.post("/hooks/on-start", headers=AUTH, json={"phone": "+919800000001", "interaction_id": "reg1"}).json()
+    ctx = client.post(
+        "/hooks/on-start",
+        headers=AUTH,
+        json={"phone": "+919800000001", "interaction_id": "reg1", "direction": "outbound"},
+    ).json()
     assert ctx["call_purpose"] == "onboarding" and ctx["mother_name"] == "Meera"  # her own consent first
+    ctx = client.post("/hooks/on-start", headers=AUTH, json={"phone": "+919800000001", "interaction_id": "reg2"}).json()
+    assert ctx["call_purpose"] == "inbound"  # if she calls in first: no intro, straight to what is happening
 
     client.post("/api/demo/inject", json={"mother_id": m["id"], "transcript": RED})
     assert to_chat(tg, RAVI_CHAT)[-1]["text"].startswith("🔴 URGENT — Jodi alert for Meera")  # re-bound by phone

@@ -70,8 +70,10 @@ def test_onboarding_photo_readback_confirm(client):
 
 
 def test_on_start_contexts(client):
-    ctx = start(client, "int_a")
-    assert ctx["caller_role"] == "mother" and ctx["call_purpose"] == "onboarding" and ctx["mother_name"] == "Lakshmi"
+    ctx = start(client, "int_a")  # she calls in (maybe an emergency): no onboarding intro
+    assert ctx["caller_role"] == "mother" and ctx["call_purpose"] == "inbound" and ctx["mother_name"] == "Lakshmi"
+    ctx = start(client, "int_a2", direction="outbound")  # Jodi's own first call to her: onboarding
+    assert ctx["call_purpose"] == "onboarding"
     onboard_lakshmi(client)
     ctx = start(client, "int_b")
     assert ctx["call_purpose"] == "inbound" and ctx["open_ticket"] == "none" and "stitches" in ctx["focus_topics"]
