@@ -41,6 +41,12 @@ INVALID = {
 FIELD_LABELS = [("mother_name", "Mother"), ("mother_phone", "Mother's phone"), ("delivery_date", "Born on"),
                 ("delivery_type", "Delivery"), ("baby_weight", "Birth weight"), ("born_early", "Born early"),
                 ("dm_name", "Emergency contact"), ("language", "Call language")]  # fmt: skip
+BOT_COMMANDS: list[tuple[str, str]] = [
+    ("status", "How the mother and baby are doing (ASHA: your mothers)"),
+    ("prescription", "Send a prescription photo"),
+    ("help", "Jodi commands"),
+    ("stop", "Stop Jodi messages in this chat"),
+]
 HELP = ("Jodi commands:\n/status – how the mother and baby are doing\n/prescription – send a prescription photo\n"
         "/stop – stop Jodi messages in this chat\n/help – this list\nIn an emergency, call 108.")  # fmt: skip
 DM_CHAIN = ["dm_name", "dm_relation", "dm_phone"]

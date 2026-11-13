@@ -43,6 +43,16 @@ async def poll_forever() -> None:
             backoff = min(backoff * 2, 30.0)
 
 
+async def register_commands() -> None:
+    """Fill Telegram's "/" menu. Without it the menu is empty (commands only work when typed)."""
+    from app.domain.telegram_prompts import BOT_COMMANDS
+
+    try:
+        await get_integrations().telegram.set_commands(BOT_COMMANDS)
+    except Exception as exc:
+        log(logger, "telegram setMyCommands failed", logging.WARNING, error=redact_secrets(type(exc).__name__))
+
+
 async def configure_webhook() -> None:
     s = get_settings()
     if not s.public_base_url:

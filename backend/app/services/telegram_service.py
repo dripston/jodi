@@ -89,6 +89,15 @@ async def _effect(s: Session, sess: TelegramSession, eff: Effect, user_id: str, 
             text = messages.render("WELCOME", mother.language, **telegram_onboarding.welcome_values(s, mother))
             await tg.send_logged(s, link, text, "welcome", now)
         return None
+    if link is not None and link.role == "asha" and not link.mother_id:
+        if eff.kind == "status":
+            await tg.raw_send(chat_id, telegram_alerts.asha_status(s, link.phone, now))
+        elif eff.kind in ("read_rx", "save_rx"):
+            await tg.raw_send(chat_id, "Prescriptions are added from the mother's or family's Jodi chat.")
+        elif eff.kind == "stop":
+            link.active = False
+            s.commit()
+        return None
     if link is None or not link.mother_id:
         await tg.raw_send(chat_id, "Please send /start and share your phone number first.")
         return None

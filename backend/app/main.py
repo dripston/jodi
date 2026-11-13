@@ -34,6 +34,7 @@ async def _start_telegram(settings: Settings) -> asyncio.Task[None] | None:
         return None
     from app.jobs import telegram_poller
 
+    await telegram_poller.register_commands()
     if settings.telegram_mode == "webhook":
         await telegram_poller.configure_webhook()
         return None

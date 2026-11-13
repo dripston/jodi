@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.errors import DomainError
 from app.core.logging import log, mask_phone
 from app.core.time import day_since_delivery, ist_today, to_ist
-from app.db.models import Mother, TelegramLink, Ticket
+from app.db.models import Asha, Mother, TelegramLink, Ticket
 from app.domain import facilities as fac
 from app.domain import messages
 from app.repositories import mothers as mrepo
@@ -104,6 +104,31 @@ def status_summary(s: Session, mother: Mother, now: datetime) -> str:
         baby_status=messages.LEVEL_WORDS.get(baby.status if baby else "green", "green"),
         next_call=next_call_text(s, mother),
     )  # fmt: skip
+
+
+def asha_status(s: Session, asha_phone: str, now: datetime) -> str:
+    """/status from an ASHA chat: her mothers by priority (fixed template, no clinical detail)."""
+    from app.services import asha_service
+
+    asha = s.exec(select(Asha).where(Asha.phone == asha_phone)).first()
+    if asha is None:
+        return "This chat is not linked to Jodi."
+    rows = asha_service.priority_list(s, asha.id, now)
+    if not rows:
+        return messages.render("ASHA_STATUS_EMPTY", "en", asha=asha.name)
+    lines = "\n".join(
+        messages.render(
+            "ASHA_STATUS_LINE",
+            "en",
+            n=p,
+            name=m.name,
+            day=_day(m, now),
+            status=messages.LEVEL_WORDS.get(m.status, m.status),
+            alert=" (open alert)" if tid else "",
+        )  # fmt: skip
+        for m, p, _reason, tid in rows
+    )
+    return messages.render("ASHA_STATUS", "en", asha=asha.name, lines=lines)
 
 
 async def handle_ticket_callback(s: Session, link: TelegramLink | None, data: str, now: datetime) -> str:

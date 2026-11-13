@@ -337,3 +337,24 @@ def test_asha_chat_gets_nothing_for_other_ashas_mothers(client, tg):
     t = lakshmi_ticket()
     send(client, callback(other_chat, f"ack:{t.id}"))
     assert lakshmi_ticket().state != "acknowledged"
+
+
+def test_bot_menu_is_registered_at_startup(client, tg):
+    import asyncio
+
+    from app.jobs import telegram_poller
+
+    asyncio.run(telegram_poller.register_commands())
+    assert [c for c, _ in tg.commands] == ["status", "prescription", "help", "stop"]
+
+
+def test_asha_status_lists_her_mothers(client, tg):
+    asha_chat = 7011
+    send(client, text(asha_chat, "/start"), contact(asha_chat, "919800000009"))  # Sunita, a_001
+    client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED})
+    send(client, text(asha_chat, "/status"))
+    out = to_chat(tg, asha_chat)[-1]["text"]
+    assert out.startswith("ASHA Sunita: your mothers today")
+    assert "Lakshmi" in out and "(open alert)" in out and "+91" not in out
+    send(client, text(asha_chat, "/prescription"), photo(asha_chat))
+    assert "family's Jodi chat" in to_chat(tg, asha_chat)[-1]["text"]

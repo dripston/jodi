@@ -39,6 +39,8 @@ class TelegramClient(Protocol):
 
     async def set_webhook(self, url: str, secret: str) -> None: ...
 
+    async def set_commands(self, commands: list[tuple[str, str]]) -> None: ...
+
 
 def reply_markup(buttons: Buttons | None, request_contact: str | None) -> dict[str, Any] | None:
     if request_contact:
@@ -61,6 +63,7 @@ class MockTelegramClient:
     files: dict[str, tuple[bytes, str, str]] = field(default_factory=dict)
     updates: list[dict[str, Any]] = field(default_factory=list)
     webhook: tuple[str, str] | None = None
+    commands: list[tuple[str, str]] = field(default_factory=list)
     fail: bool = False
 
     def _check(self) -> None:
@@ -91,6 +94,10 @@ class MockTelegramClient:
     async def set_webhook(self, url: str, secret: str) -> None:
         self._check()
         self.webhook = (url, secret)
+
+    async def set_commands(self, commands: list[tuple[str, str]]) -> None:
+        self._check()
+        self.commands = list(commands)
 
 
 class RealTelegramClient:
@@ -153,3 +160,7 @@ class RealTelegramClient:
         if secret:
             payload["secret_token"] = secret
         await self._call("setWebhook", payload)
+
+    async def set_commands(self, commands: list[tuple[str, str]]) -> None:
+        """The "/" menu Telegram shows in every chat with the bot."""
+        await self._call("setMyCommands", {"commands": [{"command": c, "description": d} for c, d in commands]})
