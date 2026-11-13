@@ -130,8 +130,63 @@ curl -s -F file=@slip.jpg -F phone=+919800000001 $B/api/onboarding/photo
 curl -s $B/api/mothers/m_001/audit
 ```
 
+## Telegram family channel (optional)
+
+Telegram is an **extra** channel for families; **voice calls stay primary**. A red alert always places the phone call / transfer and the ASHA alert first, and Telegram is sent in addition. If Telegram fails (network, bad token, unlinked chat), it is logged and every ticket, call and assessment flow continues. Messages are fixed templates (`app/domain/messages.py`, instruction sentences copied from `docs/red-scripts.md`) with status and instructions only: no transcripts, no full phone numbers. Family chats never get more than §7 allows. The bot token is never logged.
+
+| Variable | Default | Use |
+|---|---|---|
+| `TELEGRAM_ENABLED` | `false` | master switch; `false` = everything behaves exactly as without Telegram |
+| `TELEGRAM_BOT_TOKEN` | | from @BotFather |
+| `TELEGRAM_MODE` | `polling` | `polling` (no ngrok needed) or `webhook` |
+| `TELEGRAM_WEBHOOK_SECRET` | | required in webhook mode; Telegram sends it as `X-Telegram-Bot-Api-Secret-Token` |
+| `TELEGRAM_MOCK` | `false` | in-memory client (also used when `SARVAM_MOCK=true` and no token is set) |
+
+### Setup
+
+1. In Telegram, open **@BotFather** → `/newbot` → pick a name (e.g. "Jodi demo") and a username ending in `bot`. Copy the token into `.env` as `TELEGRAM_BOT_TOKEN` (never commit it).
+2. Optional: `/setcommands` in BotFather: `start - link this chat`, `status - mother and baby status`, `prescription - send a prescription photo`, `help - commands`, `stop - stop messages`.
+3. Set `TELEGRAM_ENABLED=true`.
+   - **Polling (recommended for the demo):** `TELEGRAM_MODE=polling`. The backend calls `getUpdates` in a background task (it clears any webhook first).
+   - **Webhook:** `TELEGRAM_MODE=webhook`, `TELEGRAM_WEBHOOK_SECRET=<random>`, `PUBLIC_BASE_URL=<ngrok url>`. On startup the backend registers `{PUBLIC_BASE_URL}/hooks/telegram` with the secret.
+4. Start the backend as usual. With `SARVAM_MOCK=true` the rest of the system stays offline.
+
+What the bot does:
+- `/start` → "Share my phone number" button → links the chat when the number matches a mother (`mother`), a family contact (`family`) or an ASHA. Only your **own** shared contact is accepted.
+- Unknown number → onboarding: role → mother's name (and phone if family) → delivery date → delivery type → birth weight (0.8–5.5 kg) → born early → emergency contact → language → discharge-slip photo (or Skip) → review (✅ Confirm / ✏️ Edit) → consent → welcome with the first call date. Typed answers are saved as `family_reported` / `mother_reported`, slip fields as `document_extracted`, plus a note "Consent recorded via Telegram by <role>". **The mother's first voice call still asks her own spoken consent.**
+- Alerts on ticket open, on a level rise, and as an escalation reminder (deduped), with **✅ I'm on it** (acknowledges the ticket as `telegram:+91 98•••• 0002`) and **🏥 We reached hospital** (`family:telegram`). Dismissal never closes a ticket.
+- After a green check-in: one status message per day to family chats.
+- A photo outside onboarding, or `/prescription` → medicines read by Document AI → ✅ Correct saves `document_extracted` medicine entries; ❌ Wrong saves nothing.
+- `/status` (status only), `/help`, `/stop` (unlinks the chat).
+
+### Demo flow
+
+1. Husband's phone: open the bot → `/start` → share contact. If his number isn't registered, he onboards the mother with a discharge-slip photo → review → consent → welcome message.
+2. Seeded demo instead: Ravi's number `+919800000002` is already Lakshmi's decision-maker, so sharing that contact links straight away.
+3. Run the red check-in call (or `POST /api/demo/inject`). The husband's phone **rings first** (family-alert call / transfer), then the Telegram alert arrives with the two buttons.
+4. He taps **✅ I'm on it**, and the board shows the ticket as *acknowledged* (by `telegram:+91 98•••• 0002`). `GET /api/mothers/m_001/messages` lists "alert → husband ✓".
+
+### Testing without a phone
+
+Run the backend with `TELEGRAM_ENABLED=true TELEGRAM_MOCK=true TELEGRAM_MODE=webhook TELEGRAM_WEBHOOK_SECRET=dev`, then:
+
+```bash
+TELEGRAM_WEBHOOK_SECRET=dev python -m app.scripts.tg_simulate link        # Ravi links to Lakshmi
+curl -s -X POST $B/api/demo/inject -H 'Content-Type: application/json' \
+  -d '{"mother_id":"m_001","transcript":"User: ondu ghante alli batte poora odde aaytu"}'
+curl -s $B/api/mothers/m_001/messages                                      # alert → husband
+TELEGRAM_WEBHOOK_SECRET=dev python -m app.scripts.tg_simulate ack <ticket_id>
+TELEGRAM_WEBHOOK_SECRET=dev python -m app.scripts.tg_simulate onboard     # full family onboarding
+
+# raw update with curl
+curl -s -X POST $B/hooks/telegram -H 'X-Telegram-Bot-Api-Secret-Token: dev' -H 'Content-Type: application/json' \
+  -d '{"update_id":1,"message":{"chat":{"id":7002},"from":{"id":7002},"text":"/start"}}'
+```
+
 ## Known gaps
 
 - Live Sarvam paths (LLM, Document AI, Instant Outbound) are implemented but **not yet exercised against the real API**. Outbound needs `SARVAM_OUTBOUND_URL` and a body check against the dashboard recipe.
+- The Telegram channel has been tested with the mock client and simulated updates only, not yet with a real bot token on a phone. Kannada message drafts in `app/domain/messages.py` are not sent until a native speaker checks them (`TRANSLATIONS_APPROVED`).
+- There is no medicine-reminder mechanism yet; confirmed prescriptions are recorded on the timeline only.
 - kn/hi versions of the fixed scripts don't exist yet, so English is returned.
 - Medicine names in record updates use a fixed list (`app/domain/updates.py`); unknown medicines aren't captured.
