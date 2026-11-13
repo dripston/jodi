@@ -1,0 +1,36 @@
+{
+  "_comment": "Jodi voice agent - call transfer is a Sarvam CORE tool, not an API tool. It is configured under Canvas > Settings > In Call Actions > Call forwarding; the instruction references it as call_transfer (insert with @). This file records the settings so the dashboard can be rebuilt.",
+  "name": "call_transfer",
+  "type": "core_tool",
+  "dashboard_location": "Settings > In Call Actions > Call forwarding",
+  "settings": {
+    "call_forwarding_enabled": true,
+    "destination_type": "Phone number",
+    "value_type": "Variable",
+    "variable": "transfer_to",
+    "static_fallback": null
+  },
+  "description": "Bridges the live call to the family decision-maker. Use it only when assess_risk has returned level = red and transfer_to is not empty, and only AFTER you have finished reading say_verbatim word for word. Do not add words of your own before transferring (the script already says 'I am connecting your family'). Never transfer for amber or green. Never transfer when transfer_to is empty, or when you are already speaking with that person (for example on a family_alert call).",
+  "when_to_use": [
+    "assess_risk returned level = red AND transfer_to is not empty AND you have finished reading say_verbatim."
+  ],
+  "never_use_when": [
+    "level is amber or green",
+    "transfer_to is empty or 'none'",
+    "call_purpose is family_alert (you are already speaking with the family member)",
+    "you have not finished reading say_verbatim"
+  ],
+  "on_failed_transfer": "(Non-clinical line, PENDING CONTENT-OWNER APPROVAL.) If the transfer does not connect and you are still on the line, say in the call language: 'I could not reach your family on the phone. Your ASHA has been informed.' Then stay on the line, keep listening, and call assess_risk if anything new is said. Do not repeat or rephrase the emergency instructions yourself; if the caller asks what to do, call assess_risk again and read say_verbatim.",
+  "telephony_support": {
+    "supported_end_to_end": ["Vobiz (incl. Rent from Sarvam numbers)", "Plivo"],
+    "supported_with_setup": ["Exotel (needs transfer applets in the Exotel App)"],
+    "not_self_serve": "all other providers",
+    "not_available_in": ["browser voice tester", "chat", "Sarvam Tests (simulated, text) - verify"]
+  },
+  "notes": [
+    "Source: https://docs.sarvam.ai/voice-agents/build/tools/call-transfer.md. One destination type per agent; the value can be read from an agent variable at runtime. Docs say the variable 'is resolved when the transfer runs', so transfer_to written by assess_risk mid-call should be used. Verify on a real phone.",
+    "After a transfer the call's End Reason is CALL_TRANSFER: the caller is bridged to the destination and the agent is no longer in the conversation. So Jodi cannot hear or answer the husband after the transfer. The demo step 'Husband: Delivery aadmele heege -> Jodi reads DISMISSAL-RESPONSE' cannot happen on the transferred leg; it needs a separate family_alert call to the husband (see prompts/family_alert.md) or the dismissal must be said on the mother's call before the transfer.",
+    "The destination must answer; a ring-out looks like a failed transfer. Test with phone B before the demo.",
+    "Whether the on_end hook fires (and what transcript it carries) for a transferred call is not documented. Verify in Call Logs."
+  ]
+}

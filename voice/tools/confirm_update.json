@@ -1,0 +1,45 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool (During conversation). Notation as in assess_risk.json. No real secrets in this file.",
+  "name": "confirm_update",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Saves the pending update (from record_update or onboarding_save) into the record. Call it ONLY after you have read readback_text and the caller has clearly said yes (haudu / sari / haan / ji haan / yes) to that exact read-back. Never call it after a 'no', a correction, silence or an unclear answer; in those cases fix the details and call record_update or onboarding_save again to get a new read-back. After it returns, read @confirm_say.",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/confirm-update",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "pending_id": "@pending_id",
+      "confirmed": true
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Saved: @update_saved. Say this to the caller: @confirm_say",
+  "save_reply_into_variables": {
+    "saved": "update_saved",
+    "say": "confirm_say"
+  },
+  "if_it_fails": "Sorry, I could not save this just now. I will try again after the call, and your ASHA will be told.",
+  "mock_response": {
+    "saved": true,
+    "entry_ids": ["e_050", "e_051"],
+    "say": "Saved. Thank you."
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/confirm-update' -H 'Content-Type: application/json' -d '{\"pending_id\":\"p_12\",\"confirmed\":true}'",
+  "notes": [
+    "Contract: docs/contracts.md sections 4.5 and 4.6.",
+    "'confirmed' is a static true: the agent only calls this tool after a clear yes. A 'no' is handled by not calling it and re-running record_update / onboarding_save, which issues a new pending_id. This avoids LLM-filled body parameters, which the Sarvam docs do not document for API tools. Unconfirmed pending updates should expire on the backend.",
+    "pending_id is read from the agent variable written by the latest record_update / onboarding_save call, so it always points at the most recent read-back."
+  ]
+}

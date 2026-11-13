@@ -1,0 +1,48 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool (During conversation). Notation as in assess_risk.json. No real secrets in this file.",
+  "name": "record_update",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Prepares an update to the mother's or baby's record from what the caller has just said (ASHA visit findings, BP, baby weight, a doctor's new medicine or note, a family member's report, or information from an unknown caller). It does NOT save yet: it returns readback_text and a pending_id. Call it once the caller has finished giving the update and you have already repeated every number and medicine name back to them. Then read readback_text word for word and ask for a clear yes. If the caller corrects anything, call record_update again (the transcript now has the correction) and read the new readback_text. Say a short filler first ('Ondu nimisha...').",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/record-update",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "caller_phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID",
+      "transcript": "@CallTranscript",
+      "about_mother_phone": null
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Read this to the caller word for word and wait for a clear yes or a correction: @readback_text",
+  "save_reply_into_variables": {
+    "pending_id": "pending_id",
+    "readback_text": "readback_text"
+  },
+  "if_it_fails": "Sorry, I could not prepare this update just now. Your ASHA will be told, and you can call this number again at any time.",
+  "mock_response": {
+    "pending_id": "p_12",
+    "readback_text": "I heard: Lakshmi, BP 150 over 100, baby weight 2.8 kilograms. Shall I save this?"
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/record-update' -H 'Content-Type: application/json' -d '{\"caller_phone\":\"+919800000009\",\"interaction_id\":\"int_test_002\",\"transcript\":\"user: Lakshmi nodide, BP 150 over 100, magu 2.8 kg\",\"about_mother_phone\":null}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.4. Source label (asha_measured / doctor_verified / family_reported / unverified) is decided by the backend from the caller phone and transcript (access rules section 7).",
+    "about_mother_phone is sent as null; the backend identifies which mother from the transcript (the ASHA says the mother's name). The Sarvam docs do not document LLM-filled body parameters for API tools, so we avoid them here. If a mother cannot be resolved, the backend should say so in readback_text.",
+    "Doctor notes: the doctor must say they are a doctor and their name must be confirmed on the call (contract section 7) before this tool is called.",
+    "No separate tool is needed for 'reached': when an ASHA-measured or doctor-verified update (with a measurement or medicine) is confirmed, the backend marks the open ticket reached. The ticket closes only after a later non-red assessment.",
+    "Free-text updates are accepted too (contracts section 7, anyone may add information): when nothing clinical is said, the caller's latest statement is read back and saved as a note. Notes never mark a ticket reached."
+  ]
+}

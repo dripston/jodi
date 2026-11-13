@@ -1,0 +1,50 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool (During conversation). Notation as in assess_risk.json. No real secrets in this file.",
+  "name": "read_summary",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Gets the mother's health history as a short spoken summary, after the backend checks that this phone is allowed to hear it. Call it when: a doctor or nurse is speaking on the mother's phone; the mother or a family member asks what is in her record; an ASHA asks for a mother's history; or ANY caller (including an unknown number) asks for the mother's or baby's health information. Never share history from memory or from other variables; only read summary_text. Say a short filler first ('Ondu nimisha...').",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/read-summary",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "caller_phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID"
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Allowed: @summary_allowed. Read this text exactly, without adding to it: @summary_text. If allowed is false, do not share any other health information on this call, but offer to take an update.",
+  "save_reply_into_variables": {
+    "allowed": "summary_allowed",
+    "summary_text": "summary_text"
+  },
+  "if_it_fails": "Sorry, I cannot open the record just now. I will ask your ASHA to call you back.",
+  "mock_response": {
+    "allowed": true,
+    "summary_text": "Lakshmi, day 5 after C-section on 8 November. BP 150/100 on day 4. On labetalol. Baby 2.6 kg at birth, mild jaundice day 4, feeding well today. No open alerts."
+  },
+  "mock_response_variants": {
+    "not_allowed": {
+      "allowed": false,
+      "summary_text": "I can only share this with the mother, her family or her ASHA."
+    }
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/read-summary' -H 'Content-Type: application/json' -d '{\"caller_phone\":\"+919800000001\",\"interaction_id\":\"int_test_001\"}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.3; access rules section 7. Every read is logged by the backend.",
+    "Discrepancy: contract 4.3 gives the denied text as 'I can only share this with the mother, her family or her ASHA.' while docs/red-scripts.md NOT-ALLOWED is 'I can only share health information with the mother, her family or her ASHA. You can still tell me any update and I will save it.' The backend should return the NOT-ALLOWED script; the agent reads whatever summary_text says.",
+    "The summary may contain the mother's name, so the agent must call this tool only when someone asks for history, never to 'check' an unknown caller."
+  ]
+}

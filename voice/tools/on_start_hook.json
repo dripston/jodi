@@ -1,0 +1,63 @@
+{
+  "_comment": "Jodi voice agent - on_start lifecycle hook. Copy into Canvas > Tools > Add tool > API tool, set 'When should this tool run?' = on_start. Notation: '@X' = pick variable X with the @ picker in the dashboard; '{{PUBLIC_BASE_URL}}' = replace with the current ngrok https URL; '{{secrets.TOOL_SHARED_SECRET}}' = our placeholder for the workspace Secret (the dashboard takes it through a masked input, there is no documented template syntax). No real secrets in this file.",
+  "name": "on_start_hook",
+  "type": "api_tool",
+  "when_to_run": "on_start",
+  "description": "Lifecycle hook (no LLM in the loop). Before the agent speaks, loads who is calling and why, and the mother's context, from the Jodi backend into the agent's input variables.",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/hooks/on-start",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID",
+      "direction": "@call_direction"
+    }
+  },
+  "max_wait_seconds": 10,
+  "response_template": null,
+  "save_reply_into_variables": {
+    "caller_role": "caller_role",
+    "call_purpose": "call_purpose",
+    "language": "language",
+    "mother_name": "mother_name",
+    "day_since_delivery": "day_since_delivery",
+    "delivery_type": "delivery_type",
+    "baby_age_days": "baby_age_days",
+    "focus_topics": "focus_topics",
+    "last_summary": "last_summary",
+    "open_ticket": "open_ticket",
+    "asha_patient_list": "asha_patient_list",
+    "next_call_day": "next_call_day"
+  },
+  "if_it_fails": "No spoken text (lifecycle hooks have no LLM). The input variables keep their defaults (caller_role = unknown, call_purpose = inbound, language = kn), so the agent treats the caller as unknown and shares no history.",
+  "mock_response": {
+    "caller_role": "mother",
+    "call_purpose": "checkin",
+    "language": "kn",
+    "mother_name": "Lakshmi",
+    "day_since_delivery": "5",
+    "delivery_type": "c_section",
+    "baby_age_days": "5",
+    "focus_topics": "bleeding, headache, stitches; baby feeding, jaundice (day 3-5)",
+    "last_summary": "Day 4: mild headache, baby feeding well.",
+    "open_ticket": "none",
+    "asha_patient_list": "",
+    "next_call_day": "7"
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/hooks/on-start' -H 'Content-Type: application/json' -d '{\"phone\":\"+919800000001\",\"interaction_id\":\"int_test_001\",\"direction\":\"outbound\"}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.1 (+ section 8: additive next_call_day). Body fields are phone, interaction_id, direction.",
+    "Lifecycle hooks cannot use a response template (Sarvam docs, API tool page).",
+    "Outbound calls: @UserIdentifier may be empty. The backend sends call_direction=outbound, call_purpose, callee_phone, mother_id and language in Instant Outbound agent_variables, and binds the call by callee phone (or, with an empty phone, the single call it placed in the last 2 minutes). Still verify what @UserIdentifier contains on a real outbound call.",
+    "There is no call-context variable for call direction: 'direction' comes from the input variable call_direction (default 'inbound'), which the backend sets to 'outbound'.",
+    "If the mother was registered by family on Telegram and has not yet given her own consent, the backend returns call_purpose = onboarding for her first call, so the onboarding playbook asks her spoken consent.",
+    "Docs do not state the max wait for lifecycle hooks separately; we use the same 10 s as mid-call tools (API tools allow up to 30 s)."
+  ]
+}

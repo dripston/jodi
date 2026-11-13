@@ -1,0 +1,45 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool (During conversation). Notation as in assess_risk.json. No real secrets in this file.",
+  "name": "onboarding_save",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Onboarding only. Prepares the mother's new health record from the onboarding conversation (plus any discharge-slip photo the backend has already read) and returns readback_text listing delivery date, delivery type, baby weight, medicines and family contact, plus a pending_id. Call it (a) after spoken consent and all onboarding questions have been answered and every number and medicine has been repeated back, or (b) right after consent if last_summary says a discharge slip was already read. Read readback_text word for word and ask for a clear yes. If the mother corrects anything, repeat the corrected value, then call onboarding_save again and read the new readback_text. Then call confirm_update. Say a short filler first ('Ondu nimisha...').",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/onboarding-save",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID",
+      "transcript": "@CallTranscript"
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Read this to the mother word for word and wait for a clear yes or a correction: @readback_text",
+  "save_reply_into_variables": {
+    "pending_id": "pending_id",
+    "readback_text": "readback_text"
+  },
+  "if_it_fails": "Sorry, I could not save your details just now. I will call you back shortly to finish.",
+  "mock_response": {
+    "pending_id": "p_01",
+    "readback_text": "I heard: delivery on 8 November by C-section, high BP in pregnancy, baby 2.6 kilograms, born at 38 weeks, labetalol 100 milligrams twice a day, husband Ravi on 98000 00002 is the main contact. Is this correct?"
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/onboarding-save' -H 'Content-Type: application/json' -d '{\"phone\":\"+919800000001\",\"interaction_id\":\"int_test_003\",\"transcript\":\"...\"}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.6 (request {phone, interaction_id, transcript}; response same shape as 4.4). Confirmation uses /tools/confirm-update.",
+    "The mock readback_text is our illustration built from the synthetic seed (contract section 6 fields); the real wording comes from the backend.",
+    "On outbound onboarding calls @UserIdentifier may be empty (see on_start_hook.json notes). Verify before the demo."
+  ]
+}

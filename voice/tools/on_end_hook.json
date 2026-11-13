@@ -1,0 +1,45 @@
+{
+  "_comment": "Jodi voice agent - on_end lifecycle hook. Canvas > Tools > Add tool > API tool, 'When should this tool run?' = on_end. Notation as in on_start_hook.json. No real secrets in this file.",
+  "name": "on_end_hook",
+  "type": "api_tool",
+  "when_to_run": "on_end",
+  "description": "Lifecycle hook (no LLM in the loop). When the call ends, sends the full transcript and final variables to the Jodi backend, which runs extraction, rules, tickets, the record update and scheduling.",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/hooks/on-end",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID",
+      "transcript": "@CallTranscript",
+      "duration_seconds": "@CallLength",
+      "variables": {
+        "call_outcome": "@call_outcome",
+        "language_used": "@language_used"
+      },
+      "answered": true
+    }
+  },
+  "max_wait_seconds": 10,
+  "response_template": null,
+  "save_reply_into_variables": {},
+  "if_it_fails": "Nothing is spoken (the call is over). The backend must be able to recover: the Instant Outbound webhook (outbound) or the deployment webhook (inbound) also carries the transcript, and POST /api/demo/inject is the manual fallback.",
+  "mock_response": {
+    "ok": true
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/hooks/on-end' -H 'Content-Type: application/json' -d '{\"phone\":\"+919800000001\",\"interaction_id\":\"int_test_001\",\"transcript\":\"...\",\"duration_seconds\":142,\"variables\":{\"call_outcome\":\"completed\",\"language_used\":\"kn\"},\"answered\":true}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.8. Backend must be idempotent per interaction_id.",
+    "'answered' is a static true: the agent (and this hook) only runs on a connected call. Unanswered outbound attempts are reported only by the Instant Outbound webhook (status no_answer / busy / failed), so the backend must take 'answered = false' from that webhook, not from this hook.",
+    "Sarvam docs list the variable lifecycle as: output variables extracted, then the on-end hook fires and pushes final values. So call_outcome and language_used should be filled here; verify in Log Analyser on the first real call.",
+    "@CallLength: the docs say it carries 'how long the call has been running' but do not state the unit. Contract expects seconds; verify and tell the backend if it is a string like '02:22'.",
+    "The backend accepts call_outcome either inside 'variables' or as a flat field, and duration_seconds as a number or a string like '02:22'.",
+    "Backup path: point the inbound deployment webhook (webhook_config.url, via the Deployments API) at {{PUBLIC_BASE_URL}}/hooks/sarvam-webhook?token=<TOOL_SHARED_SECRET>. Outbound calls placed by the backend already set webhook_config with the token in metadata. The adapter maps the Sarvam payload onto the same idempotent on-end pipeline; no_answer / busy / failed start the missed-call chain."
+  ]
+}

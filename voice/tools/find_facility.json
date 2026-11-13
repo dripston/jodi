@@ -1,0 +1,54 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool (During conversation). Notation as in assess_risk.json; '<LLM: ...>' marks the one parameter the model must choose. No real secrets in this file.",
+  "name": "find_facility",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Finds the right health facility for the mother or baby and returns one sentence to say (name, distance, opening hours). Call it only when the mother or family asks where to go: need = routine_checkup for the day-42 check, vaccines or a routine visit; need = phototherapy if they ask where the baby's yellow colour can be treated after a flag; need = emergency only if, after a red script has been read, they ask which hospital to go to. Never use it to decide whether something is an emergency, and never choose a facility by price. Read say_text as given. Say a short filler first ('Ondu nimisha...').",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/find-facility",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "mother_phone": "@UserIdentifier",
+      "need": "<LLM: one of routine_checkup | phototherapy | emergency>",
+      "interaction_id": "@InteractionID"
+    }
+  },
+  "llm_parameters": {
+    "need": {
+      "type": "string",
+      "enum": ["routine_checkup", "phototherapy", "emergency"],
+      "description": "routine_checkup for day-42 check, vaccines or routine visits; phototherapy when asked where the baby's yellow colour can be treated; emergency only after a red script when the caller asks which hospital."
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Tell the caller exactly: @facility_say_text",
+  "save_reply_into_variables": {
+    "facility_id": "facility_id",
+    "say_text": "facility_say_text",
+    "distance_km": "facility_distance_km"
+  },
+  "if_it_fails": "Sorry, I cannot find the hospital details just now. Your ASHA will tell you where to go.",
+  "mock_response": {
+    "facility_id": "f_003",
+    "say_text": "District Hospital, 6 kilometres away, open 24 hours.",
+    "distance_km": 6.1
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/find-facility' -H 'Content-Type: application/json' -d '{\"mother_phone\":\"+919800000001\",\"need\":\"routine_checkup\",\"interaction_id\":\"int_test_004\"}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.7. For need = emergency the backend returns the nearest capable government facility and ignores cost.",
+    "The Sarvam API tool docs describe body values from agent variables and call-context variables, but do not document LLM-filled parameters. If the dashboard cannot let the model fill 'need', create three tools instead (find_facility_routine, find_facility_phototherapy, find_facility_emergency), each with a static 'need'.",
+    "mother_phone uses @UserIdentifier, which is the mother's own phone only when the mother or a family member on her phone is calling. Do not call this tool for an ASHA or an unknown caller."
+  ]
+}

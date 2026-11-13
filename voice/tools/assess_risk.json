@@ -1,0 +1,111 @@
+{
+  "_comment": "Jodi voice agent - mid-call API tool. Canvas > Tools > Add tool > API tool, 'When should this tool run?' = run (During conversation). Notation: '@X' = pick variable X with the @ picker; '{{PUBLIC_BASE_URL}}' = ngrok URL; '{{secrets.TOOL_SHARED_SECRET}}' = workspace Secret entered via the masked input. No real secrets in this file.",
+  "name": "assess_risk",
+  "type": "api_tool",
+  "when_to_run": "run",
+  "description": "Checks what has been said so far against Jodi's fixed clinical rules and returns the danger level and the exact words to say. Call it: (1) after every answer in which the mother, baby or family describes any symptom, number or concern; (2) IMMEDIATELY, even mid-sentence, if anyone mentions fits, jerking, unconsciousness, fainting, not breathing or blue lips; (3) when anyone plays down a symptom ('it's normal', 'she's fine', 'delivery aadmele heege', 'sab theek hai'); (4) again right after the caller answers a clarify_question; (5) early in every inbound call once the caller says what is happening; (6) once before closing a check-in in which no symptom was mentioned. Say a short filler first ('Ondu nimisha...'). Never decide the danger level yourself.",
+  "request": {
+    "method": "POST",
+    "url": "{{PUBLIC_BASE_URL}}/tools/assess-risk",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "auth": {
+      "type": "bearer",
+      "token": "{{secrets.TOOL_SHARED_SECRET}}"
+    },
+    "body": {
+      "phone": "@UserIdentifier",
+      "interaction_id": "@InteractionID",
+      "transcript": "@CallTranscript",
+      "language": "@language"
+    }
+  },
+  "max_wait_seconds": 10,
+  "filler_before_call": {
+    "kn": "Ondu nimisha...",
+    "hi": "Ek minute...",
+    "en": "One moment..."
+  },
+  "response_template": "Risk level: @level. Exact text to read word for word, if not empty: @say_verbatim. Exact question to ask, if not empty: @clarify_question. Transfer number, if not empty: @transfer_to. Rules: if level is red or amber, read the exact text word for word with nothing added, removed or reworded. If level is red and the transfer number is not empty, use call_transfer right after reading. If the question is not empty, ask exactly that question, then call assess_risk again. If level is green, say nothing about the result and continue the conversation.",
+  "save_reply_into_variables": {
+    "level": "level",
+    "say_verbatim": "say_verbatim",
+    "transfer_to": "transfer_to",
+    "clarify_question": "clarify_question",
+    "ticket_id": "ticket_id"
+  },
+  "if_it_fails": "PENDING CONTENT-OWNER APPROVAL (no approved script exists for a tool failure): \"Sorry, I could not check this just now. If you feel this is serious, please call 108. I will ask your ASHA to call you.\" Needs kn/hi versions from docs/red-scripts.md owner.",
+  "mock_response": {
+    "level": "red",
+    "rule_ids": [
+      "M-BLEED-01"
+    ],
+    "say_verbatim": "Lie down flat and raise your legs on a pillow. Do not stand up. Call 108 now and go to District Hospital (demo). I am connecting your family and informing your ASHA.",
+    "transfer_to": "+919800000002",
+    "clarify_question": null,
+    "ticket_id": "t_007"
+  },
+  "mock_response_variants": {
+    "green": {
+      "level": "green",
+      "rule_ids": [],
+      "say_verbatim": null,
+      "transfer_to": null,
+      "clarify_question": null,
+      "ticket_id": null
+    },
+    "amber_mother": {
+      "level": "amber",
+      "rule_ids": [
+        "M-BLEED-02",
+        "M-HTN-05"
+      ],
+      "say_verbatim": "Lakshmi, this needs to be checked today. Your ASHA will visit you today, and I will call you again in a few hours. If it gets worse, call 108 or call me back on this number at any time.",
+      "transfer_to": null,
+      "clarify_question": null,
+      "ticket_id": "t_008"
+    },
+    "clarify": {
+      "level": "amber",
+      "rule_ids": [
+        "M-FEVER-01"
+      ],
+      "say_verbatim": null,
+      "transfer_to": null,
+      "clarify_question": "Is the baby drinking no milk at all, or drinking less than usual?",
+      "ticket_id": "t_009"
+    },
+    "red_baby": {
+      "level": "red",
+      "rule_ids": [
+        "B-JAUN-01"
+      ],
+      "say_verbatim": "Your baby needs to see a doctor now. Please call 108 immediately and take the baby to District Hospital (demo). Keep the baby warm and close to you. I am connecting your family now, and I am informing your ASHA.",
+      "transfer_to": "+919800000002",
+      "clarify_question": null,
+      "ticket_id": "t_010"
+    },
+    "dismissal_after_flag": {
+      "level": "red",
+      "rule_ids": [
+        "M-BLEED-01",
+        "X-DISMISS-01"
+      ],
+      "say_verbatim": "I understand. But this sign can be dangerous after delivery, so we must get it checked. I have informed your ASHA, and I will stay in touch until someone has seen her.",
+      "transfer_to": null,
+      "clarify_question": null,
+      "ticket_id": "t_007"
+    }
+  },
+  "curl": "curl -X POST '{{PUBLIC_BASE_URL}}/tools/assess-risk' -H 'Content-Type: application/json' -d '{\"phone\":\"+919800000001\",\"interaction_id\":\"int_test_001\",\"transcript\":\"user: naalku batte since morning, tale bhaara\"}'",
+  "notes": [
+    "Contract: docs/contracts.md section 4.2. Backend must answer in under 8 s; max wait here is 10 s.",
+    "Confirmed backend behaviour (docs/contracts.md section 8): a NEW dismissal while a flag is active returns DISMISSAL-RESPONSE in say_verbatim at the flag's level (never lower), with transfer_to null on family_alert calls. On a family_alert call the first assess_risk returns FAMILY-ALERT; a 'yes'/'haudu' from the family acknowledges the ticket. If extraction fails, clarify_question = 'Could you tell me that again?' and the keyword safety net still decides.",
+    "Optional 'language' body field (contracts section 8): accepts kn/hi/en or Kannada/Hindi/English. '@language' is the on-start input variable; if the dashboard exposes a variable that follows a mid-call language switch, use that instead. Until native-speaker versions exist in docs/red-scripts.md, the backend returns the English master text for every language.",
+    "say_verbatim texts in the mocks are the English master texts from docs/red-scripts.md with {name}/{facility} filled. The live backend returns the kn/hi version from its lookup table.",
+    "rule_ids is deliberately not saved into a variable: the agent must never speak rule IDs.",
+    "The filler is spoken by the agent because the prompt tells it to; the Sarvam docs describe no dedicated filler field on the API tool.",
+    "Sarvam's Mock API tool (docs: 'Mocking a tool') echoes the request via postman-echo.com, while the API tool page describes a mock with a canned response. Use mock_response as the canned response where the dashboard offers it; otherwise test against the real backend seeded with POST /api/demo/reset."
+  ]
+}
