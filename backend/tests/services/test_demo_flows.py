@@ -432,3 +432,13 @@ def test_mother_speaks_hindi_so_husbands_alert_call_is_hindi(client, monkeypatch
     start(client, "int_hf", RAVI, "outbound")
     r = assess(client, "Agent: Namaste\nUser: haan, boliye", iid="int_hf", phone=RAVI)  # romanised reply
     assert r["say_verbatim"].startswith("नमस्कार, मैं जोडी बोल रही हूँ, Lakshmi")  # husband's script in Hindi
+
+
+def test_next_call_knows_her_previous_symptoms(client, clock):
+    assess(client, "User: thumba thale novu ide, kannu manju aagide", "int_sym1")  # severe headache, blurred vision
+    assess(client, "User: jwara illa", "int_sym1")  # "no fever" is not a symptom to follow up
+    clock.advance(days=1)
+    ctx = client.post("/hooks/on-start", headers=AUTH, json={"phone": LAKSHMI, "interaction_id": "int_sym2"}).json()
+    assert "blurred vision (yesterday)" in ctx["previous_symptoms"]
+    assert "fever" not in ctx["previous_symptoms"]
+    assert ctx["last_summary"].startswith("Recently reported symptoms: ")

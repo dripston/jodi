@@ -216,6 +216,7 @@ class OnStartOut(BaseModel):
     open_ticket: str
     asha_patient_list: str
     next_call_day: str = ""  # additive
+    previous_symptoms: str = ""  # additive: recent symptoms she reported (also folded into last_summary)
 
 
 def _to_seconds(v: Any) -> int | None:

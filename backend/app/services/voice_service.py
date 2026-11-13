@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlmodel import Session
 
 from app.core.logging import log
-from app.core.time import day_since_delivery
+from app.core.time import day_since_delivery, ensure_utc, ist_today, to_ist
 from app.db.models import AccessLog, CallLog, Mother, ProcessedInteraction
 from app.domain import access
 from app.domain import facilities as fac
@@ -109,16 +109,43 @@ def on_start(s: Session, body: OnStartIn, now: datetime) -> OnStartOut:
     return _mother_context(s, mother, role, purpose, now)
 
 
+def previous_symptoms(s: Session, m: Mother, now: datetime, days: int = 14, limit: int = 5) -> str:
+    """Symptoms she reported recently (newest first, one per sign), e.g. "severe headache (yesterday)".
+    Only present symptoms ("no fever" is skipped); vitals and medicines are not symptoms."""
+    since, today = now - timedelta(days=days), ist_today(now)
+    seen: set[str] = set()
+    items: list[str] = []
+    for e in reversed(rrepo.entries_in_order(s, m.id)):
+        if e.kind != "symptom" or not e.code or not e.value or e.value.startswith("no ") or e.code in seen:
+            continue
+        created = ensure_utc(datetime.fromisoformat(e.created_at))
+        if created < since:
+            continue
+        seen.add(e.code)
+        ago = (today - to_ist(created).date()).days
+        when = "today" if ago <= 0 else "yesterday" if ago == 1 else f"{ago} days ago"
+        items.append(f"{e.value} ({when})")
+        if len(items) == limit:
+            break
+    return "; ".join(items)
+
+
 def _mother_context(s: Session, m: Mother, role: str, purpose: str, now: datetime) -> OnStartOut:
     day = day_since_delivery(m.delivery_date, now) if m.delivery_date else 0
     last = next((c.summary for c in rrepo.recent_calls(s, 20, m.id) if c.summary), "")
+    symptoms = previous_symptoms(s, m, now)
+    # Jodi asks about each recently reported symptom (better / same / worse) on her next call.
+    parts = ([f"Recently reported symptoms: {symptoms}."] if symptoms else []) + (
+        [f"Last call: {last}"] if last else []
+    )
+    last = " ".join(parts)
     t = rrepo.active_ticket(s, m.id)
     return OnStartOut(
         caller_role=role, call_purpose=purpose, language=m.language, mother_name=m.name,
         day_since_delivery=str(day), delivery_type=m.delivery_type or "", baby_age_days=str(day),
         focus_topics=focus_topics(m, day), last_summary=last,
         open_ticket=f"{t.level}: {t.reason_text}" if t else "none", asha_patient_list="",
-        next_call_day=_next_call_day(s, m),
+        next_call_day=_next_call_day(s, m), previous_symptoms=symptoms,
     )  # fmt: skip
 
 
