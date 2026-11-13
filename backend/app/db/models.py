@@ -238,3 +238,35 @@ class DocJob(SQLModel, table=True):
     fields: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     error: str | None = None
     created_at: datetime | None = _dt()
+
+
+# ------------------------------------------------------------------ Telegram (extra family channel)
+class TelegramLink(SQLModel, table=True):
+    chat_id: str = Field(primary_key=True)
+    tg_user_id: str = ""
+    phone: str = ""  # verified via Telegram contact share (own contact only)
+    mother_id: str | None = Field(default=None, index=True)
+    role: str = "family"  # mother | family | asha
+    linked_at: datetime | None = _dt()
+    active: bool = True
+
+
+class TelegramSession(SQLModel, table=True):
+    chat_id: str = Field(primary_key=True)
+    state: str = "new"
+    data: dict[str, Any] = _json({})
+    updated_at: datetime | None = _dt()
+
+
+class OutboundMessage(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    mother_id: str | None = Field(default=None, index=True)
+    chat_id: str = Field(index=True)
+    chat_role: str = ""
+    kind: str  # alert | status | onboarding | prescription | welcome
+    ticket_id: str | None = Field(default=None, index=True)
+    dedupe_key: str | None = Field(default=None, index=True)
+    text: str
+    sent_at: datetime | None = _dt()
+    delivered: bool = False
+    error: str | None = None

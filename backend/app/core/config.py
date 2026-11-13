@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     sarvam_mock: bool = False
 
+    # Telegram: an extra family channel. Voice calls stay primary; Telegram is never the only alert.
+    telegram_enabled: bool = False
+    telegram_bot_token: str = ""
+    telegram_mode: str = "polling"  # polling | webhook
+    telegram_webhook_secret: str = ""
+    telegram_mock: bool = False
+    telegram_timeout_s: float = 8.0
+    telegram_poll_timeout_s: int = 25
+    docai_poll_max_s: float = 60.0
+
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'jodi.db').as_posix()}"
     scheduler_enabled: bool = True
     seed_on_startup: bool = True

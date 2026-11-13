@@ -24,8 +24,16 @@ def mask_phone(phone: str | None) -> str:
     return f"{digits[:2]}•••• {digits[-4:]}"
 
 
+_BOT_TOKEN_RE = re.compile(r"\d{5,}:[A-Za-z0-9_-]{20,}")
+
+
+def redact_secrets(text: str) -> str:
+    """Never let a Telegram bot token reach a log line or an error message."""
+    return _BOT_TOKEN_RE.sub("<telegram-token>", text)
+
+
 def mask_text(text: str) -> str:
-    return _PHONE_RE.sub(lambda m: mask_phone(m.group(0)), text)
+    return _PHONE_RE.sub(lambda m: mask_phone(m.group(0)), redact_secrets(text))
 
 
 class JsonFormatter(logging.Formatter):
@@ -52,6 +60,9 @@ def setup_logging(level: int = logging.INFO) -> None:
     root = logging.getLogger()
     root.handlers[:] = [handler]
     root.setLevel(level)
+    # httpx logs full request URLs at INFO; Telegram URLs contain the bot token.
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 def log(logger: logging.Logger, msg: str, _lvl: int = logging.INFO, **ctx: Any) -> None:
