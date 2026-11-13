@@ -318,3 +318,25 @@ Fields are saved with `source: "document_extracted"` only after voice read-back 
 | Unknown number | ❌ | ✅ saved as `family_reported` with `source_phone` and flagged `unverified_caller` |
 
 Every read is written to an access log (`who`, `when`, `mother_id`, `interaction_id`).
+
+---
+
+## 8. Additive changes (backend, 2026-11-13)
+
+All optional / additive; nothing existing was removed or renamed.
+
+- **§2 Entry:** optional `flags: string[]` (e.g. `"unverified_caller"`, `"stopped"` on a stopped-medicine entry). Part of the hashed entry body.
+- **§4.1 on-start response:** optional `next_call_day` (string, e.g. `"7"`, empty when none). Agent closing line: "I'll call you again on day {next_call_day}".
+- **§4.2 assess-risk:** optional request field `language` (`kn` | `hi` | `en`) for the current call language after a mid-call switch. `say_verbatim` also carries:
+  - `DISMISSAL-RESPONSE` when a *new* dismissal is heard while a flag/ticket is active (level = the flag's level, never lower);
+  - `FAMILY-ALERT` on the first assess-risk of a `family_alert` call (`transfer_to` is always null on those calls). A "yes"/"haudu" from the family on that call acknowledges the ticket.
+  - If extraction fails, `clarify_question = "Could you tell me that again?"`; the keyword safety net still decides.
+- **§4.3 read-summary:** optional request field `about_mother_phone` (for ASHA callers). Denied reads return the NOT-ALLOWED text from `docs/red-scripts.md`.
+- **§4.4 / §4.6:** `pending_id` may be `null` when nothing was understood or the mother could not be identified; `readback_text` then holds the question to ask.
+- **§4.9 `POST /hooks/sarvam-webhook`** (new): adapter for Sarvam's Instant Outbound / deployment webhook payload (`attempt_id`, `status`, `interaction_id`, `duration`, `final_agent_variables`, `interaction_transcript[{role, en_text}]`). Authenticated by `webhook_config.metadata.token` (set by the backend on outbound calls) or `?token=`, because Sarvam webhooks cannot send the bearer header. Runs the same idempotent pipeline as §4.8.
+- **§5:** Instant Outbound returns `attempt_id`; `POST /api/calls` returns it as `interaction_id` until the real `@InteractionID` is bound on `/hooks/on-start` or the webhook. `agent_variables` sent: `call_direction`, `call_purpose`, `callee_phone`, `mother_id`, `language`.
+- **§6 audit:** `broken_at` is the 1-based position of the first broken entry in chain order (oldest = 1); optional `broken_entry_id` (string).
+- **§6 onboarding photo:** optional `mother_id` in the response; optional `error` (when reading failed, `status = "done"` and `fields = null`). Medicine `dose` / `frequency` are always strings (`""` when unknown).
+- **§6 inject:** optional request field `interaction_id` (makes repeat injections idempotent).
+- **§6 ASHA list item:** optional `ticket_id`.
+- **§6 lists:** `/api/mothers` lists only enrolled mothers (with a delivery date); a stub created by a photo upload appears after onboarding is confirmed. `/api/calls/recent` lists calls linked to a mother. `CallLog.outcome` / `duration_seconds` are omitted (not null) while a call is in progress.
