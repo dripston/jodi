@@ -1,0 +1,106 @@
+"""Contract tests: every /api endpoint returns the documented shape (validated by schemas)."""
+
+from __future__ import annotations
+
+from sqlmodel import select
+
+from app.db.models import Entry
+from app.schemas.api import (
+    AshaListItem,
+    AuditOut,
+    MotherDetail,
+    MotherOut,
+    StatsOut,
+    TicketOut,
+    VitalsOut,
+)
+from tests.conftest import AUTH
+
+
+def test_health(client):
+    assert client.get("/api/health").json() == {"ok": True}
+
+
+def test_reset_seeds_expected_counts(client):
+    mothers = client.get("/api/mothers").json()
+    assert len(mothers) == 3
+    assert len(client.get("/api/ashas").json()) == 2
+    lakshmi = next(m for m in mothers if m["id"] == "m_001")
+    assert lakshmi["status"] == "green" and lakshmi["name"] == "Lakshmi"
+    for m in mothers:
+        MotherOut.model_validate(m)
+    from app.db.models import Facility
+    from app.db.session import new_session
+
+    with new_session() as s:
+        assert len(list(s.exec(select(Facility)))) == 30
+
+
+def test_mother_detail_and_filters(client):
+    MotherDetail.model_validate(client.get("/api/mothers/m_001").json())
+    assert [m["id"] for m in client.get("/api/mothers?status=amber").json()] == ["m_002"]
+    assert [m["id"] for m in client.get("/api/mothers?q=pri").json()] == ["m_003"]
+    assert {m["id"] for m in client.get("/api/mothers?asha_id=a_001").json()} == {"m_001", "m_002"}
+    assert client.get("/api/mothers/nope").status_code == 404
+
+
+def test_timeline_audit_vitals_summary_calls(client):
+    tl = client.get("/api/mothers/m_003/timeline").json()
+    assert tl and tl[0]["created_at"] >= tl[-1]["created_at"]
+    AuditOut.model_validate(client.get("/api/mothers/m_003/audit").json())
+    v = VitalsOut.model_validate(client.get("/api/mothers/m_003/vitals").json())
+    assert v.bp[0].systolic == 118 and v.baby_weight[0].grams == 3250
+    assert "Priya" in client.get("/api/mothers/m_003/summary").json()["summary_text"]
+    assert client.get("/api/mothers/m_003/calls").json() == []
+
+
+def test_tickets_and_asha_list(client):
+    open_t = client.get("/api/tickets?state=open").json()
+    assert len(open_t) == 1
+    TicketOut.model_validate(open_t[0])
+    lst = client.get("/api/asha/a_001/list").json()
+    for item in lst:
+        AshaListItem.model_validate(item)
+    assert lst[0]["mother"]["id"] == "m_002" and lst[0]["priority"] == 1
+
+
+def test_stats_and_status_by_day(client):
+    st = StatsOut.model_validate(client.get("/api/stats").json())
+    assert st.mothers_enrolled == 3 and st.open_alerts == {"red": 0, "amber": 1} and st.asha_tasks_open == 1
+    rows = client.get("/api/stats/status-by-day").json()
+    assert len(rows) == 43 and rows[9]["amber"] == 1 and rows[1]["green"] == 1
+
+
+def test_chain_tamper_detected(client):
+    assert client.get("/api/mothers/m_003/audit").json()["valid"] is True
+    from app.db.session import new_session
+
+    with new_session() as s:
+        e = s.exec(select(Entry).where(Entry.mother_id == "m_003")).first()
+        e.value = "tampered"
+        s.commit()
+        tampered_id = e.id
+    out = client.get("/api/mothers/m_003/audit").json()
+    assert out["valid"] is False and out["broken_entry_id"] == tampered_id and out["broken_at"] == 1
+
+
+def test_tools_require_bearer(client):
+    body = {"phone": "+919800000001", "interaction_id": "x", "direction": "inbound"}
+    assert client.post("/hooks/on-start", json=body).status_code == 401
+    assert client.post("/hooks/on-start", json=body, headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert client.post("/hooks/on-start", json=body, headers=AUTH).status_code == 200
+    assert client.post("/tools/assess-risk", json={"interaction_id": "x"}).status_code == 401
+
+
+def test_place_call_and_recent(client):
+    out = client.post("/api/calls", json={"mother_id": "m_001", "purpose": "onboarding"}).json()
+    assert out["interaction_id"]
+    recent = client.get("/api/calls/recent").json()
+    assert recent[0]["interaction_id"] == out["interaction_id"] and recent[0]["purpose"] == "onboarding"
+    calls = client.get("/api/mothers/m_001/calls").json()
+    assert "outcome" not in calls[0] and "duration_seconds" not in calls[0]  # frontend defaults apply
+
+
+def test_unenrolled_stub_hidden_from_list(client):
+    client.post("/api/onboarding/photo", files={"file": ("s.jpg", b"x", "image/jpeg")}, data={"phone": "+919811111111"})
+    assert all(m["phone"] != "+919811111111" for m in client.get("/api/mothers").json())
