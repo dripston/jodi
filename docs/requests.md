@@ -44,16 +44,16 @@ Format (append at the bottom, newest last):
 - What: Add optional `rule_ids: string[]` to `Entry` (timeline items) listing the rules that entry triggered.
 - Why: The design system asks each `TimelineItem` to show a rule chip when the fact fired a rule. Today only tickets carry `rule_ids`. The frontend mock already sends it; when the field is missing, no chip is shown.
 - Contract impact: CONTRACT change in docs/contracts.md §2 (Entry), additive optional field
-- Status: open
+- Status: done (backend b665ac3): `Entry.rule_ids` is served on `/api/mothers/{id}/timeline`; empty for absent facts ("no …"), notes and medicines; not part of the hashed body. Contract §8.
 
 ## [2026-11-13 13:30] from frontend to backend
 - What: Return `mother_id` in the `/api/onboarding/photo` responses (POST and GET poll), or let `POST /api/calls` accept `{ "phone": "...", "purpose": "onboarding" }`.
 - Why: `/onboard` starts the onboarding call after the slip is read, but `POST /api/calls` needs a `mother_id`. The frontend currently matches the typed phone number against `/api/mothers`, which fails for a mother who is not enrolled yet.
 - Contract impact: CONTRACT change in docs/contracts.md §6, additive optional field
-- Status: open
+- Status: done (already in place): `POST /api/onboarding/photo` creates the mother if the phone is new and both POST and GET poll return `mother_id`. Use it for `POST /api/calls`.
 
 ## [2026-11-13 13:30] from frontend to backend
 - What: Please confirm that `GET /api/tickets?state=open` returns every ticket that is not `closed` (open, notified, acknowledged, reached), and that `GET /api/tickets` with no `state` returns all tickets including closed ones.
 - Why: `/alerts` has Open / Acknowledged / Closed tabs and the sidebar badge counts open + notified tickets. The frontend mock uses this behaviour.
 - Contract impact: none (clarification of docs/contracts.md §6)
-- Status: open
+- Status: done (confirmed): `state=open` returns every ticket that is not `closed` (open, notified, acknowledged, reached); no `state` returns all tickets including closed; any other value filters on that exact state.
