@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from sqlmodel import Session
 
+from app.core.config import get_settings
 from app.core.time import ist_today
 from app.db.models import Asha, AshaTask, Assessment, Baby, Facility, FamilyContact, Mother, Ticket, TicketEvent
 from app.domain.rules import RULES_VERSION
@@ -14,7 +15,7 @@ from app.services import call_service, record_service
 from app.services.status import refresh_status
 
 ASHAS = [  # (id, name, phone, village)
-    ("a_001", "Sunita", "+919800000009", "Demo Village"),
+    ("a_001", "Sunita", "ASHA_PHONE", "Demo Village"),
     ("a_002", "Meena", "+919800000010", "Demo Village 2"),
 ]
 
@@ -54,6 +55,16 @@ FACILITIES: list[tuple[str, str, str, list[str], float, float, str, bool]] = [
 ]  # fmt: skip
 
 
+def demo_phones() -> dict[str, str]:
+    """Synthetic numbers unless real demo phones are set in .env (DEMO_*_PHONE)."""
+    s = get_settings()
+    return {
+        "mother": s.demo_mother_phone or "+919800000001",
+        "husband": s.demo_husband_phone or "+919800000002",
+        "asha": s.demo_asha_phone or "+919800000009",
+    }
+
+
 def _add_mother(s: Session, m: Mother, baby: Baby, family: list[FamilyContact]) -> Mother:
     s.add(m)
     s.add(baby)
@@ -65,8 +76,9 @@ def _add_mother(s: Session, m: Mother, baby: Baby, family: list[FamilyContact]) 
 
 def seed(s: Session, now: datetime) -> None:
     today = ist_today(now)
+    phones = demo_phones()
     for aid, name, phone, village in ASHAS:
-        s.add(Asha(id=aid, name=name, phone=phone, village=village))
+        s.add(Asha(id=aid, name=name, phone=phones["asha"] if phone == "ASHA_PHONE" else phone, village=village))
     for fid, name, typ, services, lat, lng, cost, h24 in FACILITIES:
         s.add(Facility(id=fid, name=name, type=typ, services=services, lat=lat, lng=lng,
                        phone=f"+918000000{fid[-3:]}", cost_band=cost, open_24x7=h24))  # fmt: skip
@@ -79,7 +91,7 @@ def seed(s: Session, now: datetime) -> None:
         Mother(
             id="m_001",
             name="Lakshmi",
-            phone="+919800000001",
+            phone=phones["mother"],
             language="kn",
             delivery_date=today - timedelta(days=1),
             delivery_type="c_section",
@@ -91,7 +103,7 @@ def seed(s: Session, now: datetime) -> None:
         Baby(id="b_001", mother_id="m_001"),
         [
             FamilyContact(
-                mother_id="m_001", name="Ravi", relation="husband", phone="+919800000002", decision_maker=True
+                mother_id="m_001", name="Ravi", relation="husband", phone=phones["husband"], decision_maker=True
             ),
             FamilyContact(mother_id="m_001", name="Savitri", relation="mother_in_law", phone="+919800000006"),
         ],  # fmt: skip
@@ -174,7 +186,10 @@ def seed(s: Session, now: datetime) -> None:
 
 def _history(s: Session, m: Mother, now: datetime,
              rows: list[tuple[int, str, str, float | None, str, str]]) -> None:  # fmt: skip
-    phones = {"mother_reported": m.phone, "asha_measured": "+919800000009" if m.asha_id == "a_001" else "+919800000010"}
+    phones = {
+        "mother_reported": m.phone,
+        "asha_measured": demo_phones()["asha"] if m.asha_id == "a_001" else "+919800000010",
+    }
     for days_ago, subject, code, num, value, source in rows:
         at = now - timedelta(days=days_ago)
         unit = {"weight_grams": "g", "bp_systolic": "mmHg", "bp_diastolic": "mmHg", "pads_soaked_count": "pads"}.get(

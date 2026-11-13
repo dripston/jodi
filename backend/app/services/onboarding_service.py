@@ -106,6 +106,12 @@ def _photo_fields(s: Session, mother_id: str) -> dict[str, Any]:
 
 
 async def onboarding_save(s: Session, body: OnboardingSaveIn, now: datetime) -> PendingOut:
+    if not body.phone:  # no caller number (dashboard test): read back, but never create a phoneless mother
+        try:
+            voice = await get_integrations().extractor.extract_onboarding(body.transcript, ist_today(now))
+        except ExtractionError:
+            voice = {}
+        return PendingOut(pending_id=None, readback_text=onboarding_readback(voice))
     mother = ensure_mother(s, body.phone, now)
     photo = _photo_fields(s, mother.id)
     try:

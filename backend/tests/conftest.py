@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 os.environ.update({
+    "JODI_NO_DOTENV": "1",  # never read the developer's .env (real keys, real phones) in tests
     "DATABASE_URL": "sqlite:///:memory:",
     "SARVAM_MOCK": "true",
     "TOOL_SHARED_SECRET": "test-secret",

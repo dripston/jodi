@@ -14,6 +14,24 @@ class Lenient(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    @field_validator("interaction_id", mode="before", check_fields=False)
+    @classmethod
+    def _iid(cls, v: Any) -> Any:
+        """Dashboard 'Send' tests and simulated calls may send no InteractionID: use a one-off id."""
+        if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
+            import uuid
+
+            return f"anon_{uuid.uuid4().hex[:10]}"
+        return v
+
+    @field_validator("phone", "caller_phone", "mother_phone", mode="before", check_fields=False)
+    @classmethod
+    def _phone(cls, v: Any) -> Any:
+        """Dashboard 'Send' tests send User identifier = null: treat as an unknown caller."""
+        if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
+            return ""
+        return v
+
 
 # ------------------------------------------------------------------ core models
 class FamilyPhone(BaseModel):
@@ -170,7 +188,7 @@ class OkOut(BaseModel):
 # -------------------------------------------------------------- hooks / tools
 class OnStartIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     direction: str | None = None
 
 
@@ -209,7 +227,7 @@ def _to_seconds(v: Any) -> int | None:
 
 class OnEndIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     transcript: str = ""
     duration_seconds: int | None = None
     variables: dict[str, Any] = Field(default_factory=dict)
@@ -236,7 +254,7 @@ class OnEndIn(Lenient):
 
 class AssessRiskIn(Lenient):
     phone: str | None = ""
-    interaction_id: str
+    interaction_id: str = Field(default="", validate_default=True)
     transcript: str = ""
     language: str | None = None  # additive: call language after a mid-call switch
 
@@ -269,7 +287,7 @@ class AssessRiskOut(BaseModel):
 
 
 class ReadSummaryIn(Lenient):
-    caller_phone: str
+    caller_phone: str = ""
     interaction_id: str | None = None
     about_mother_phone: str | None = None  # additive, for ASHA callers
 
@@ -280,14 +298,14 @@ class ReadSummaryOut(BaseModel):
 
 
 class RecordUpdateIn(Lenient):
-    caller_phone: str
+    caller_phone: str = ""
     interaction_id: str | None = None
     transcript: str = ""
     about_mother_phone: str | None = None
 
 
 class OnboardingSaveIn(Lenient):
-    phone: str
+    phone: str = ""
     interaction_id: str | None = None
     transcript: str = ""
 
@@ -309,7 +327,7 @@ class ConfirmOut(BaseModel):
 
 
 class FindFacilityIn(Lenient):
-    mother_phone: str
+    mother_phone: str = ""
     need: str = "routine_checkup"
     interaction_id: str | None = None
 
