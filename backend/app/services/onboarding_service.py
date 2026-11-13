@@ -162,6 +162,17 @@ async def register(s: Session, body: RegisterIn, now: datetime) -> Mother:
     return mother
 
 
+async def first_call(mother_id: str, now: datetime) -> None:
+    """Jodi's first call right after registration (onboarding playbook). Never raises."""
+    from app.db.session import new_session
+
+    try:
+        with new_session() as s:
+            await call_service.place_call(s, mrepo.get_mother(s, mother_id), "onboarding", now)
+    except Exception as exc:  # noqa: BLE001 - the record is saved; the dashboard can retry the call
+        log(logger, "first call failed", logging.WARNING, mother_id=mother_id, error=type(exc).__name__)
+
+
 SLIP_FIELDS = {"delivery_date", "delivery_type", "complications", "baby_birth_weight_grams", "gestation_weeks",
                "medicines"}  # fmt: skip
 
@@ -256,7 +267,9 @@ async def apply_onboarding(s: Session, p: PendingUpdate, now: datetime, consent_
         note = f"Consent recorded via Telegram by {by}"
     else:
         note = f"Registered on the {channel} by the {by}; her own spoken consent is asked on her first call"
-    if not any(e.kind == "note" and e.value == note for e in rrepo.entries_in_order(s, mother.id)):  # re-saves add nothing
+    if not any(
+        e.kind == "note" and e.value == note for e in rrepo.entries_in_order(s, mother.id)
+    ):  # re-saves add nothing
         record_service.append_entry(s, mother, subject="mother", kind="note", source="system", now=now,
                                     value=note, source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
     call_service.plan_milestones(s, mother, now)

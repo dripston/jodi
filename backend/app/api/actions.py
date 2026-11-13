@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, UploadFile
 from sqlmodel import Session
 
 from app.api.deps import now
@@ -105,9 +105,11 @@ async def onboarding_photo(
 
 @router.post("/onboarding/register", response_model=MotherDetail)
 async def onboarding_register(
-    body: RegisterIn, s: Session = Depends(get_session), t: datetime = Depends(now)
+    body: RegisterIn, background: BackgroundTasks, s: Session = Depends(get_session), t: datetime = Depends(now)
 ) -> MotherDetail:
     m = await onboarding_service.register(s, body, t)
+    if body.call_now and m.consent_at is None:
+        background.add_task(onboarding_service.first_call, m.id, t)  # rings her within seconds of saving
     baby = mrepo.baby_of(s, m.id)
     return MotherDetail(mother=mother_out(s, m, t, embed=True), baby=baby_out(baby) if baby else None)
 

@@ -482,3 +482,23 @@ def test_slip_upload_with_unformatted_phone_lands_on_her_registered_record(clien
     assert m["baby"] is not None  # embedded, never null
     phones = [x["phone"] for x in client.get("/api/mothers").json()]
     assert phones.count("+919800000001") == 1 and "9800000001" not in phones
+
+
+def test_register_places_the_first_call_straight_away(client):
+    from app.integrations.registry import get_integrations
+
+    placed = get_integrations().call_placer.placed
+    n = len(placed)
+    body = {
+        "phone": "+919811111111",
+        "name": "Rekha",
+        "language": "kn",
+        "delivery_date": "2026-11-12",
+        "delivery_type": "normal",
+        "family": [{"name": "H", "relation": "husband", "phone": "9822222222"}],
+    }
+    assert client.post("/api/onboarding/register", json=body).status_code == 200
+    assert [p[:2] for p in placed[n:]] == [("+919811111111", "onboarding")]
+    body["call_now"] = False
+    client.post("/api/onboarding/register", json={**body, "phone": "+919833333333"})
+    assert len(placed) == n + 1

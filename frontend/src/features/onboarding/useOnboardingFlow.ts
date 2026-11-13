@@ -48,7 +48,10 @@ export function useOnboardingFlow(phone: string) {
     register.mutate(input, {
       onSuccess: (r) => {
         setMother(r.mother);
-        toast(`Health record created for ${r.mother.name}`, { description: 'Her family and ASHA are linked. Jodi can call her now.' });
+        setCallStartedAt(new Date().toISOString()); // the backend places Jodi's first call straight away
+        toast(`Health record created. Jodi is calling ${r.mother.name} now`, {
+          description: 'Introduction, her consent, then the first check-in.',
+        });
       },
       onError: () => toast('Could not create the record', { tone: 'error', description: 'Check the details and try again.' }),
     });

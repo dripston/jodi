@@ -410,6 +410,7 @@ class RegisterIn(BaseModel):
     family: list[FamilyIn] = Field(default_factory=list)
     lat: float | None = None
     lng: float | None = None
+    call_now: bool = True  # Jodi places her first call (intro, consent, first check-in) right after
 
     @field_validator("phone", mode="before")
     @classmethod

@@ -285,6 +285,7 @@ export interface RegisterInput {
   delivery_date?: string;
   delivery_type?: string;
   family: FamilyInput[];
+  call_now?: boolean;
 }
 
 export type PlannedCall = z.infer<typeof PlannedCallSchema>;
