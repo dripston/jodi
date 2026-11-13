@@ -249,6 +249,15 @@ class AssessRiskIn(Lenient):
             return json.dumps(v, ensure_ascii=False)
         return v or ""
 
+    @field_validator("language", mode="before")
+    @classmethod
+    def _lang(cls, v: Any) -> str | None:
+        """Accept codes (kn/hi/en) or names ("Hindi", "Kannada"); anything else is ignored."""
+        if not v or str(v).startswith("@"):
+            return None
+        s = str(v).strip().lower()
+        return {"kannada": "kn", "hindi": "hi", "english": "en"}.get(s, s if s in ("kn", "hi", "en") else None)
+
 
 class AssessRiskOut(BaseModel):
     level: Level
