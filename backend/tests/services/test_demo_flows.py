@@ -352,3 +352,11 @@ def test_find_facility(client, need, expected_type):
     assert r["facility_id"] and r["say_text"].endswith(".")
     if need == "emergency":
         assert "District Hospital" in r["say_text"] or "Hospital" in r["say_text"]
+
+
+def test_timeline_entries_carry_the_rules_they_triggered(client):
+    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_rules")
+    tl = client.get("/api/mothers/m_001/timeline").json()
+    mine = [e for e in tl if e["interaction_id"] == "int_rules"]
+    assert any(e["rule_ids"] == ["M-BLEED-01"] for e in mine)
+    assert all(e["rule_ids"] == [] for e in tl if e["interaction_id"] != "int_rules" or e["code"] is None)

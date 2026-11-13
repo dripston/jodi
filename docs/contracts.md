@@ -326,6 +326,7 @@ Every read is written to an access log (`who`, `when`, `mother_id`, `interaction
 All optional / additive; nothing existing was removed or renamed.
 
 - **§2 Entry:** optional `flags: string[]` (e.g. `"unverified_caller"`, `"stopped"` on a stopped-medicine entry). Part of the hashed entry body.
+- **§2 Entry:** optional `rule_ids: string[]`: the rules this fact triggered in its interaction (e.g. `["M-BLEED-01"]`). Empty for absent facts ("no …"), notes, medicines, and history/dismissal/keyword rules. Computed when served, **not** part of the hashed entry body.
 - **§4.1 on-start response:** optional `next_call_day` (string, e.g. `"7"`, empty when none). Agent closing line: "I'll call you again on day {next_call_day}".
 - **§4.2 assess-risk:** optional request field `language` (`kn` | `hi` | `en`) for the current call language after a mid-call switch. `say_verbatim` also carries:
   - `DISMISSAL-RESPONSE` when a *new* dismissal is heard while a flag/ticket is active (level = the flag's level, never lower);

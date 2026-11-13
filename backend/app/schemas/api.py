@@ -103,6 +103,7 @@ class EntryOut(BaseModel):
     flags: list[str] = Field(default_factory=list)
     prev_hash: str
     hash: str
+    rule_ids: list[str] = Field(default_factory=list)  # additive (§2): rules this fact triggered; not hashed
 
 
 class TicketHistoryItem(BaseModel):

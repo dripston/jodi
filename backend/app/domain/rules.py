@@ -325,3 +325,49 @@ def assess(inp: AssessmentInput) -> Assessment:
     _apply_history(a, inp.previous_rule_ids, inp.consecutive_missed_calls)
     _apply_dismissal(a, inp.dismissal_detected)
     return a
+
+
+# Fact codes each rule reads, per subject: lets the timeline show which rules a recorded fact triggered.
+# Keep in step with the predicates above (tests/domain check every individual and dyad rule is listed).
+RULE_FACT_CODES: dict[str, dict[str, frozenset[str]]] = {
+    "M-BLEED-01": {"mother": frozenset({"pad_soaked_within_hour", "clots_large", "bleeding_heavy", "dizziness_fainting"})},
+    "M-BLEED-02": {"mother": frozenset({"bleeding_heavy", "pads_soaked_count"})},
+    "M-HTN-01": {"mother": frozenset({"headache_severe", "vision_blurred", "swelling_face_hands"})},
+    "M-HTN-02": {"mother": frozenset({"bp_systolic", "bp_diastolic"})},
+    "M-HTN-03": {"mother": frozenset({"bp_systolic", "bp_diastolic", "headache_severe", "vision_blurred"})},
+    "M-HTN-04": {"mother": frozenset({"bp_systolic", "bp_diastolic"})},
+    "M-HTN-05": {"mother": frozenset({"headache_severe", "vision_blurred"})},
+    "M-FITS-01": {"mother": frozenset({"fits", "unconscious"})},
+    "M-SEPSIS-01": {"mother": frozenset({"fever", "discharge_foul", "abdominal_pain_severe"})},
+    "M-FEVER-01": {"mother": frozenset({"fever"})},
+    "M-WOUND-01": {"mother": frozenset({"wound_red_or_oozing"})},
+    "M-WOUND-02": {"mother": frozenset({"wound_red_or_oozing", "fever"})},
+    "M-BREAST-01": {"mother": frozenset({"breast_red_painful"})},
+    "M-CLOT-01": {"mother": frozenset({"breathless", "chest_pain"})},
+    "M-CLOT-02": {"mother": frozenset({"calf_pain_swelling"})},
+    "M-MED-01": {"mother": frozenset({"stopped_bp_medicine"})},
+    "M-MED-02": {"mother": frozenset({"stopped_iron"})},
+    "B-FEED-01": {"baby": frozenset({"not_feeding"})},
+    "B-FITS-01": {"baby": frozenset({"fits"})},
+    "B-BREATH-01": {"baby": frozenset({"breathing_fast", "breaths_per_minute"})},
+    "B-BREATH-02": {"baby": frozenset({"chest_indrawing"})},
+    "B-TEMP-01": {"baby": frozenset({"feels_hot", "feels_cold"})},
+    "B-ACT-01": {"baby": frozenset({"lethargic"})},
+    "B-JAUN-01": {"baby": frozenset({"jaundice_palms_soles"})},
+    "B-JAUN-02": {"baby": frozenset({"jaundice_face_body"})},
+    "B-JAUN-03": {"baby": frozenset({"jaundice_face_body"})},
+    "B-CORD-01": {"baby": frozenset({"cord_red_or_pus"})},
+    "B-VOMIT-01": {"baby": frozenset({"vomiting_everything"})},
+    "B-FEED-02": {"baby": frozenset({"feeding_poor"})},
+    "B-WET-01": {"baby": frozenset({"wet_nappies_count"})},
+    "D-INF-01": {"mother": frozenset({"fever"}), "baby": frozenset({"feeding_poor", "feels_hot", "lethargic"})},
+    "D-FEED-01": {"mother": frozenset({"breast_red_painful"}), "baby": frozenset({"feeding_poor"})},
+    "D-JAUN-01": {"baby": frozenset({"feeding_poor", "jaundice_face_body", "jaundice_palms_soles"})},
+}  # fmt: skip
+
+
+def rules_for_fact(subject: str, code: str | None, fired_rule_ids: Iterable[str]) -> list[str]:
+    """The fired rules (in firing order) that read this fact. History/dismissal/keyword rules are not per-fact."""
+    if not code:
+        return []
+    return [r for r in fired_rule_ids if code in RULE_FACT_CODES.get(r, {}).get(subject, frozenset())]

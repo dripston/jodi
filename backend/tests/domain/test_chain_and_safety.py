@@ -97,3 +97,25 @@ def test_script_language_variant():
     book = ScriptBook(parse_scripts('## AMBER-BABY\n\n> "English."\n> **kn:** "ಕನ್ನಡ."\n'))
     assert book.get("AMBER-BABY", "kn") == ("ಕನ್ನಡ.", "kn")
     assert book.get("AMBER-BABY", "hi") == ("English.", "en")
+
+
+# ------------------------------------------------------------ rule ↔ fact map
+def test_every_fact_rule_lists_valid_fact_codes():
+    from app.domain.facts import BABY_CODES, MOTHER_CODES, NUMERIC_CODES
+    from app.domain.rules import BABY_RULES, MOTHER_RULES, RULE_FACT_CODES
+
+    for rule_id, *_ in MOTHER_RULES + BABY_RULES:
+        assert rule_id in RULE_FACT_CODES, rule_id
+    for rule_id, by_subject in RULE_FACT_CODES.items():
+        for subject, codes in by_subject.items():
+            valid = (MOTHER_CODES if subject == "mother" else BABY_CODES) | NUMERIC_CODES
+            assert codes and codes <= valid, (rule_id, codes - valid)
+
+
+def test_rules_for_fact():
+    from app.domain.rules import rules_for_fact
+
+    fired = ["M-BLEED-01", "B-FEED-02", "D-INF-01"]
+    assert rules_for_fact("mother", "clots_large", fired) == ["M-BLEED-01"]
+    assert rules_for_fact("baby", "feeding_poor", fired) == ["B-FEED-02", "D-INF-01"]
+    assert rules_for_fact("baby", "fits", fired) == [] and rules_for_fact("mother", None, fired) == []

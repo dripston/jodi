@@ -79,7 +79,8 @@ def timeline(
     mother_id: str, since: str | None = Query(default=None), s: Session = Depends(get_session)
 ) -> list[EntryOut]:
     mrepo.get_mother(s, mother_id)
-    return [entry_out(e) for e in rrepo.timeline(s, mother_id, since)]
+    fired = rrepo.rule_ids_by_interaction(s, mother_id)
+    return [entry_out(e, fired) for e in rrepo.timeline(s, mother_id, since)]
 
 
 @router.get("/mothers/{mother_id}/audit", response_model=AuditOut)

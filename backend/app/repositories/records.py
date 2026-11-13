@@ -43,6 +43,12 @@ def assessment_for_interaction(s: Session, interaction_id: str) -> Assessment | 
     return s.exec(select(Assessment).where(Assessment.interaction_id == interaction_id)).first()
 
 
+def rule_ids_by_interaction(s: Session, mother_id: str) -> dict[str, list[str]]:
+    """interaction_id → rules fired in that interaction (latest assessment wins)."""
+    q = select(Assessment).where(Assessment.mother_id == mother_id).order_by(col(Assessment.id))
+    return {a.interaction_id: list(a.rule_ids) for a in s.exec(q)}
+
+
 def previous_assessment(s: Session, mother_id: str, exclude_interaction: str | None) -> Assessment | None:
     q = select(Assessment).where(Assessment.mother_id == mother_id)
     if exclude_interaction:
