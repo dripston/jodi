@@ -411,11 +411,11 @@ def test_red_family_calls_one_at_a_time_and_again_until_acknowledged(client, clo
     assert family_calls() == 1
     lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
     assert any("new danger sign" in h["note"] for h in lak["history"])  # but ASHA/Telegram re-alerted
-    clock.advance(minutes=4)
+    clock.advance(minutes=1)
     assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m2")  # red again, not acknowledged
     assert family_calls() == 2
     assert client.post(f"/api/tickets/{lak['id']}/ack", json={"by": "family", "note": "on it"}).status_code == 200
-    clock.advance(minutes=4)
+    clock.advance(minutes=1)
     assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m3")  # family on it → no more calls
     assert family_calls() == 2
 

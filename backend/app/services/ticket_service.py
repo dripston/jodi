@@ -34,12 +34,12 @@ def add_event(s: Session, t: Ticket, state: str, now: datetime, by: str = "syste
     s.add(TicketEvent(ticket_id=t.id, at=now, state=state, by=by, note=note))
 
 
-FAMILY_CALL_GAP = timedelta(minutes=3)
+FAMILY_CALL_GAP = timedelta(seconds=45)  # only stops two calls colliding (two signs in one sentence)
 _FAMILY_CALL_NOTES = ("calling family", "family alert call")
 
 
 def _family_called_recently(s: Session, t: Ticket, now: datetime) -> bool:
-    """One family call at a time: a call queued/placed/failed in the last 3 minutes blocks another."""
+    """One family call at a time: a call queued/placed/failed in the last 45 s blocks another."""
     since = now - FAMILY_CALL_GAP
     return any(
         ev.note.startswith(_FAMILY_CALL_NOTES) and ev.at is not None and ensure_utc(ev.at) >= since
