@@ -16,7 +16,8 @@ os.environ.update({
     "TELEGRAM_MODE": "webhook",  # the polling loop is tested on its own
     "TELEGRAM_WEBHOOK_SECRET": "tg-secret",
     "TELEGRAM_BOT_TOKEN": "",
-    "FAMILY_CONTACT": "transfer",  # most scenario tests check the transfer path; call mode is tested explicitly
+    "FAMILY_CONTACT": "transfer",
+    "CALL_LOGS_ENABLED": "false",  # tests write no files (one test enables it with a temp folder)  # most scenario tests check the transfer path; call mode is tested explicitly
 })  # fmt: skip
 
 from datetime import UTC, datetime, timedelta  # noqa: E402

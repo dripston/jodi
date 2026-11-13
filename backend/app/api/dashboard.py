@@ -174,7 +174,7 @@ def recent_calls(s: Session = Depends(get_session)) -> list[RecentCall]:
             for c in rrepo.recent_calls(s, 40) if c.mother_id][:20]  # fmt: skip
 
 
-@router.get("/calls/{interaction_id}", response_model=CallDetail)
+@router.get("/calls/{interaction_id:path}", response_model=CallDetail)  # Sarvam ids contain "/"
 def call_detail(interaction_id: str, s: Session = Depends(get_session)) -> CallDetail:
     c = rrepo.get_call(s, interaction_id)
     a = rrepo.assessment_for_interaction(s, interaction_id)

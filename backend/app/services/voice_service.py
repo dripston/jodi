@@ -270,6 +270,10 @@ async def on_end(s: Session, body: OnEndIn, now: datetime) -> dict[str, object]:
 
             await telegram_alerts.notify_status_green(s, mother, now)
     out = {"ok": True, "level": result.level if result else None}
+    from app.services import call_log_service
+
+    recorded = [e.value or "" for e in (result.entries if result else []) if e.value]
+    call_log_service.write(call, mother, out["level"], recorded, now)  # type: ignore[arg-type]
     s.add(ProcessedInteraction(interaction_id=body.interaction_id, kind="on_end", result=out, created_at=now))
     s.commit()
     log(logger, "on-end processed", interaction_id=body.interaction_id, answered=body.answered,

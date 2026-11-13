@@ -3,3 +3,6 @@
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Per-call conversation logs (health data, never commit)
+call_logs/

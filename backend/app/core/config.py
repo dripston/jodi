@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     seed_on_startup: bool = True
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     docs_dir: Path = REPO_ROOT / "docs"
+    # Readable per-call conversation logs (git-ignored; health conversations, demo data only).
+    call_logs_enabled: bool = True
+    call_logs_dir: Path = BACKEND_DIR / "call_logs"
 
     # timeouts (seconds)
     llm_timeout_s: float = 6.0

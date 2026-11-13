@@ -504,3 +504,29 @@ def test_call_log_has_readable_turns(client):
     assert [t["speaker"] for t in d["turns"]] == ["Jodi", "Lakshmi"]
     assert d["turns"][1] == {"role": "caller", "speaker": "Lakshmi", "text": "ಜ್ವರ ಇಲ್ಲ.", "en": "No fever."}
     assert d["transcript"].startswith("Jodi: Any fever?")
+
+
+def test_call_detail_works_for_sarvam_ids_with_a_slash(client):
+    start(client, "20261114/abc-01:02:03-xyz", direction="outbound")
+    assert client.get("/api/calls/20261114%2Fabc-01%3A02%3A03-xyz").status_code == 200
+    assert client.get("/api/calls/recent").status_code == 200
+
+
+def test_call_conversation_is_written_to_a_backend_log_file(client, tmp_path, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "call_logs_enabled", True)
+    monkeypatch.setattr(get_settings(), "call_logs_dir", tmp_path)
+    start(client, "20261114/log-01", direction="outbound")
+    payload = {"attempt_id": "a3", "interaction_id": "20261114/log-01", "status": "connected", "duration": 40,
+               "interaction_transcript": [
+                   {"role": "agent", "en_text": "Any fever?", "indic_text": "ಜ್ವರ ಇದೆಯಾ?"},
+                   {"role": "user", "en_text": "4 pads soaked since morning", "indic_text": "naalku batte"}],
+               "metadata": {"token": "test-secret"}}  # fmt: skip
+    client.post("/hooks/sarvam-webhook", json=payload)
+    files = list(tmp_path.rglob("*.txt"))
+    assert len(files) == 1
+    text = files[0].read_text(encoding="utf-8")
+    assert "Jodi: ಜ್ವರ ಇದೆಯಾ?" in text and "(Any fever?)" in text
+    assert "Lakshmi: naalku batte" in text and "Level: AMBER" in text
+    assert "--- Recorded in her health record ---" in text and "+919800000001" not in text  # phone masked
