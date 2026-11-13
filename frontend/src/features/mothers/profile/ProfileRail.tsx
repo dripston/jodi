@@ -5,6 +5,7 @@ import { AlertCard } from '@/components/alerts/AlertCard';
 import { ChainBadge } from '@/components/status/ChainBadge';
 import { Card, CardBody } from '@/components/ui/Card';
 import { formatAbsolute, formatWhen } from '@/lib/format';
+import { CallNow } from './CallNow';
 import { HearSummary } from './HearSummary';
 import { ShareRecord } from './ShareRecord';
 
@@ -19,7 +20,8 @@ export function ProfileRail({ mother }: { mother: Mother }) {
       ))}
       <Card>
         <CardBody className="space-y-4">
-          <div>
+          <CallNow mother={mother} />
+          <div className="border-t border-border pt-4">
             <p className="text-small text-text-muted">Next scheduled call</p>
             {mother.next_call_at ? (
               <p className="mt-1 inline-flex items-center gap-1.5 text-body font-medium text-text" title={formatAbsolute(mother.next_call_at)}>
