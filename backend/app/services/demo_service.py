@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.db.models import CallLog
+from app.db.models import CallLog, Mother, TelegramLink, TelegramSession
 from app.db.session import reset_db
 from app.repositories import mothers as mrepo
 from app.schemas.api import InjectIn, OnEndIn
@@ -16,11 +16,22 @@ from app.services.assessment_service import _CACHE
 from app.services.ids import new_id
 
 
-def reset(s: Session, now: datetime) -> None:
+def reset(s: Session, now: datetime, keep_telegram: bool = True) -> None:
+    """Back to the seeded demo state. Telegram chats that are linked stay linked (seed ids are stable),
+    so a demo can be re-run without every family member re-sharing their contact."""
+    links = [TelegramLink(**r.model_dump()) for r in s.exec(select(TelegramLink)).all()] if keep_telegram else []
+    sessions = [
+        TelegramSession(**r.model_dump())
+        for r in s.exec(select(TelegramSession)).all()
+        if r.state == "linked" and keep_telegram
+    ]
     s.close()
     reset_db()
     _CACHE.clear()
     seed(s, now)
+    kept = {lk.chat_id for lk in links if lk.mother_id is None or s.get(Mother, lk.mother_id) is not None}
+    s.add_all([lk for lk in links if lk.chat_id in kept] + [ts for ts in sessions if ts.chat_id in kept])
+    s.commit()
 
 
 def advance_day(s: Session, mother_id: str, days: int, now: datetime) -> None:

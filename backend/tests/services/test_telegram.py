@@ -308,3 +308,10 @@ async def test_polling_loop_handles_updates_and_survives_errors(client, tg):
         await task
     tg.updates = []
     assert to_chat(tg, 4242) and to_chat(tg, 4242)[0]["contact"]
+
+
+def test_demo_reset_keeps_telegram_links(client, tg):
+    link_ravi(client, tg)
+    assert client.post("/api/demo/reset").status_code == 200
+    assert client.post("/api/demo/inject", json={"mother_id": "m_001", "transcript": RED}).json()["level"] == "red"
+    assert to_chat(tg, RAVI_CHAT)[-1]["text"].startswith("🔴 URGENT")  # still linked: no re-sharing needed

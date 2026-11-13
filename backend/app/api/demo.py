@@ -18,8 +18,9 @@ router = APIRouter(prefix="/api/demo", tags=["demo"])
 
 
 @router.post("/reset", response_model=OkOut)
-def reset(s: Session = Depends(get_session), t: datetime = Depends(now)) -> OkOut:
-    demo_service.reset(s, t)
+def reset(keep_telegram: bool = True, s: Session = Depends(get_session), t: datetime = Depends(now)) -> OkOut:
+    """`?keep_telegram=false` also unlinks every Telegram chat (tests use it for a clean slate)."""
+    demo_service.reset(s, t, keep_telegram=keep_telegram)
     return OkOut()
 
 

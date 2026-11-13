@@ -53,7 +53,7 @@ def client(clock: Clock) -> TestClient:
     app = create_app()
     app.dependency_overrides[now_dep] = clock
     with TestClient(app) as c:
-        assert c.post("/api/demo/reset").status_code == 200
+        assert c.post("/api/demo/reset?keep_telegram=false").status_code == 200
         yield c
 
 
