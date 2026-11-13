@@ -165,10 +165,19 @@ def _upsert_assessment(s: Session, mother: Mother, interaction_id: str, a: rules
     row = rrepo.assessment_for_interaction(s, interaction_id) or Assessment(
         mother_id=mother.id, interaction_id=interaction_id, mother_level="green", baby_level="green",
         overall_level="green", rules_version=a.rules_version)  # fmt: skip
-    row.mother_level, row.baby_level, row.overall_level = a.mother_level, a.baby_level, a.overall_level
-    row.rule_ids, row.reason_text, row.rules_version = a.rule_ids, a.reason_text, a.rules_version
-    row.dismissal_detected = ex.dismissal
-    row.facts = [f.to_dict() for f in ex.facts]
+    # One call is checked several times (mother block, baby block…): each check ADDS to the call's
+    # findings, never replaces them (a later green block must not hide an earlier amber sign).
+    first = row.id is None
+    row.mother_level = a.mother_level if first else rules.max_level(row.mother_level, a.mother_level)
+    row.baby_level = a.baby_level if first else rules.max_level(row.baby_level, a.baby_level)
+    row.overall_level = a.overall_level if first else rules.max_level(row.overall_level, a.overall_level)
+    row.rule_ids = list(dict.fromkeys([*([] if first else row.rule_ids), *a.rule_ids]))
+    row.reason_text = "; ".join(dict.fromkeys(x for x in ([] if first else [row.reason_text]) + [a.reason_text] if x))
+    row.rules_version = a.rules_version
+    row.dismissal_detected = ex.dismissal or (not first and row.dismissal_detected)
+    merged = {} if first else {(f.get("subject"), f.get("code")): f for f in row.facts}
+    merged.update({(f.subject, f.code): f.to_dict() for f in ex.facts})
+    row.facts = list(merged.values())
     row.scripts = list(dict.fromkeys([*row.scripts, *scripts]))
     row.created_at = now
     s.add(row)

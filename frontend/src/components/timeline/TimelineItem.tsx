@@ -7,7 +7,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { isStrongSource } from '@/lib/clinical';
 import { cn } from '@/lib/cn';
 import { formatAbsolute, formatGrams, formatTime, formatWhen } from '@/lib/format';
-import { factLabel, KIND_LABELS } from '@/lib/labels';
+import { entryLabel, factLabel, isDenied, KIND_LABELS } from '@/lib/labels';
 
 const LEVEL_BADGE = {
   green: { tone: 'green', label: 'Normal' },
@@ -25,7 +25,7 @@ function detail(entry: Entry): string | null {
   if (entry.code === 'weight_grams' && entry.numeric_value !== null) {
     return `${formatGrams(entry.numeric_value)}${entry.value ? ` · ${entry.value}` : ''}`;
   }
-  if (!entry.code || entry.value === factLabel(entry.code, entry.subject)) return null;
+  if (!entry.code || isDenied(entry) || entry.value === factLabel(entry.code, entry.subject)) return null;
   return entry.value;
 }
 
@@ -39,7 +39,7 @@ interface TimelineItemProps {
 export function TimelineItem({ entry, isNew, showSubject = true }: TimelineItemProps) {
   const strong = isStrongSource(entry.source);
   const SubjectIcon = entry.subject === 'baby' ? Baby : User;
-  const title = entry.code ? factLabel(entry.code, entry.subject) : (entry.value ?? 'Note');
+  const title = entryLabel(entry);
   const sub = detail(entry);
   return (
     <li className={cn('relative grid grid-cols-[2rem_1fr] gap-x-3 rounded py-3 pr-2', isNew && 'animate-entry-in')}>

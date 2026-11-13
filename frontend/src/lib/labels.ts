@@ -62,6 +62,25 @@ export function factLabel(code: string | null, subject?: Subject, lang: Lang = '
   return FACT_LABELS[code]?.[lang] ?? humanise(code);
 }
 
+const TAKING: Record<string, string> = { stopped_bp_medicine: 'Taking BP medicine', stopped_iron: 'Taking iron tablets' };
+
+/** True when the entry records that a sign is absent ("no fever"). */
+export function isDenied(entry: { value: string | null; code: string | null }): boolean {
+  return Boolean(entry.code && entry.value?.toLowerCase().startsWith('no '));
+}
+
+/** What the entry says, the right way round: "No severe headache", "Taking BP medicine", "Large blood clots". */
+export function entryLabel(entry: { code: string | null; value: string | null; subject: Subject }): string {
+  if (!entry.code) return entry.value ?? 'Note';
+  if (isDenied(entry)) {
+    const taking = TAKING[entry.code];
+    if (taking) return taking;
+    const label = factLabel(entry.code, entry.subject);
+    return `No ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+  }
+  return factLabel(entry.code, entry.subject);
+}
+
 /** Plain-language labels for every rule ID in docs/clinical-rules.md. */
 const RULE_LABELS: Record<string, string> = {
   'M-BLEED-01': 'Very heavy bleeding',

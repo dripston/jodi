@@ -482,3 +482,11 @@ def test_guard_drops_agent_quotes_and_unstated_stopping():
          "quote": "Today afternoon a little bit, I will take it at night"},
     ]  # fmt: skip
     assert _guard_facts(facts, t) == []
+
+
+def test_later_green_check_in_same_call_keeps_earlier_amber(client):
+    assess(client, "Agent: Any headache or blurred vision?\nUser: kannu manju aagide", "int_blocks")  # amber
+    assess(client, "Agent: Is the baby feeding well?\nUser: chennagi kudiyuttide", "int_blocks")  # green block
+    tl = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_blocks"]
+    vision = [e for e in tl if e["code"] == "vision_blurred"]
+    assert vision and vision[0]["level"] == "amber"
