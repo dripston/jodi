@@ -490,3 +490,17 @@ def test_later_green_check_in_same_call_keeps_earlier_amber(client):
     tl = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_blocks"]
     vision = [e for e in tl if e["code"] == "vision_blurred"]
     assert vision and vision[0]["level"] == "amber"
+
+
+def test_call_log_has_readable_turns(client):
+    start(client, "int_log", direction="outbound")
+    payload = {"attempt_id": "a2", "interaction_id": "int_log", "status": "connected", "duration": 30,
+               "interaction_transcript": [
+                   {"role": "agent", "en_text": "Any fever?", "indic_text": "ಜ್ವರ ಇದೆಯಾ?"},
+                   {"role": "user", "en_text": "No fever.", "indic_text": "ಜ್ವರ ಇಲ್ಲ."}],
+               "metadata": {"token": "test-secret"}}  # fmt: skip
+    client.post("/hooks/sarvam-webhook", json=payload)
+    d = client.get("/api/calls/int_log").json()
+    assert [t["speaker"] for t in d["turns"]] == ["Jodi", "Lakshmi"]
+    assert d["turns"][1] == {"role": "caller", "speaker": "Lakshmi", "text": "ಜ್ವರ ಇಲ್ಲ.", "en": "No fever."}
+    assert d["transcript"].startswith("Jodi: Any fever?")

@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { formatAbsolute } from '@/lib/format';
 import { FactList } from './FactList';
 import { OutcomeBadge } from './OutcomeBadge';
+import { ChatTranscript } from './ChatTranscript';
 import { Transcript } from './Transcript';
 
 interface CallDetailDrawerProps {
@@ -53,7 +54,13 @@ export function CallDetailDrawer({ interactionId, mothers, onClose }: CallDetail
           </section>
           <section aria-label="Transcript">
             <h3 className="mb-2 text-h3 text-text">Transcript</h3>
-            <Transcript text={data.transcript} highlights={data.facts.map((f) => f.quote)} />
+            {data.turns.length ? (
+              <ChatTranscript turns={data.turns} highlights={data.facts.map((f) => f.quote)} />
+            ) : data.transcript ? (
+              <Transcript text={data.transcript} highlights={data.facts.map((f) => f.quote)} />
+            ) : (
+              <p className="text-small text-text-muted">The conversation appears here a few seconds after the call ends.</p>
+            )}
           </section>
         </div>
       )}

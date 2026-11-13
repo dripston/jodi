@@ -182,11 +182,19 @@ export const FactSchema = z.object({
   confidence: z.number(),
 });
 
+export const TurnSchema = z.object({
+  role: z.enum(['agent', 'caller']),
+  speaker: z.string(),
+  text: z.string(),
+  en: z.string().default(''),
+});
+
 export const CallDetailSchema = z.object({
   call: CallLogSchema,
   transcript: z.string(),
   facts: z.array(FactSchema),
   rule_ids: z.array(z.string()),
+  turns: z.array(TurnSchema).default([]),
 });
 
 export const StatsSchema = z.object({

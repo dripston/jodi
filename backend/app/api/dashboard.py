@@ -179,7 +179,18 @@ def call_detail(interaction_id: str, s: Session = Depends(get_session)) -> CallD
     c = rrepo.get_call(s, interaction_id)
     a = rrepo.assessment_for_interaction(s, interaction_id)
     facts = [FactOut(**Fact.from_dict(f).to_dict()) for f in (a.facts if a else [])]
-    return CallDetail(call=call_out(c), transcript=c.transcript, facts=facts, rule_ids=list(a.rule_ids) if a else [])
+    from app.db.models import Mother
+    from app.domain.transcript import display_turns
+    from app.schemas.api import TurnOut
+
+    mother = s.get(Mother, c.mother_id) if c.mother_id else None
+    caller = {"mother": mother.name if mother else "Mother", "family": "Family", "asha": "ASHA",
+              "doctor": "Doctor"}.get(c.caller_role or "", "Caller")  # fmt: skip
+    turns = [TurnOut(role=x["role"], speaker="Jodi" if x["role"] == "agent" else caller, text=x["text"], en=x["en"])  # type: ignore[arg-type]
+             for x in display_turns(c.transcript or "")]  # fmt: skip
+    plain = "\n".join(f"{t.speaker}: {t.en or t.text}" for t in turns)
+    return CallDetail(call=call_out(c), transcript=plain or (c.transcript or ""), facts=facts,
+                      rule_ids=list(a.rule_ids) if a else [], turns=turns)  # fmt: skip
 
 
 @router.get("/stats", response_model=StatsOut)

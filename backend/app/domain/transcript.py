@@ -79,3 +79,30 @@ def spoken_language(transcript: str) -> str | None:
         if kann >= 3 and kann > 2 * deva:
             return "kn"
     return None
+
+
+def display_turns(transcript: str) -> list[dict[str, str]]:
+    """Turns for the call log: role ("agent" | "caller"), the words as spoken, and English if Sarvam
+    gave a translation. Works for Sarvam's JSON transcript and for "User:/Agent:" text."""
+    if not transcript.strip():
+        return []
+    try:
+        data = json.loads(transcript)
+    except (ValueError, TypeError):
+        data = None
+    out: list[dict[str, str]] = []
+    if isinstance(data, list):
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role") or item.get("speaker") or "").lower()
+            en = str(item.get("en_text") or "").strip()
+            spoken = str(item.get("indic_text") or item.get("content") or item.get("text") or en).strip()
+            if spoken or en:
+                out.append({"role": "agent" if role in AGENT_ROLES else "caller", "text": spoken or en,
+                            "en": en if en and en != spoken else ""})  # fmt: skip
+        return out
+    for role, text in split_turns(transcript):
+        if text.strip():
+            out.append({"role": "agent" if role in AGENT_ROLES else "caller", "text": text.strip(), "en": ""})
+    return out

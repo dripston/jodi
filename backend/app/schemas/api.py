@@ -186,11 +186,19 @@ class FactOut(BaseModel):
     confidence: float
 
 
+class TurnOut(BaseModel):
+    role: Literal["agent", "caller"]
+    speaker: str  # "Jodi" or who called ("Meera", "Family", "ASHA")
+    text: str  # as spoken (Kannada / Hindi / English)
+    en: str = ""  # English translation when it differs
+
+
 class CallDetail(BaseModel):
     call: CallLogOut
     transcript: str
     facts: list[FactOut]
     rule_ids: list[str]
+    turns: list[TurnOut] = Field(default_factory=list)  # additive: readable call log
 
 
 class OkOut(BaseModel):
