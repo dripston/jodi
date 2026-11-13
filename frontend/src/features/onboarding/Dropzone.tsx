@@ -33,17 +33,19 @@ export function Dropzone({ file, onFile, disabled }: DropzoneProps) {
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
       className={cn(
-        'flex min-h-80 flex-col items-center justify-center rounded border border-dashed p-6 text-center transition-colors duration-120',
-        over ? 'border-brand bg-brand-soft' : 'border-border-strong bg-surface',
+        'flex min-h-72 flex-col items-center justify-center rounded border border-dashed p-6 text-center transition-colors duration-120',
+        over ? 'border-brand bg-brand-soft' : 'border-border-strong bg-surface-muted',
       )}
     >
       {preview ? (
         <img src={preview} alt="Discharge slip preview" className="max-h-60 rounded-sm border border-border object-contain" />
       ) : (
         <>
-          <FileImage className="size-6 text-text-subtle" strokeWidth={1.75} aria-hidden />
-          <p className="mt-3 text-body font-medium text-text">Drop a photo of the discharge slip</p>
-          <p className="mt-1 text-small text-text-muted">JPG or PNG. Use synthetic demo slips only.</p>
+          <span className="flex size-12 items-center justify-center rounded-full border border-border bg-surface text-text-muted shadow-raised">
+            <FileImage className="size-5" strokeWidth={1.75} aria-hidden />
+          </span>
+          <p className="mt-4 text-h3 text-text">Drop a photo of the discharge slip</p>
+          <p className="mt-1 text-body text-text-muted">JPG or PNG, or take a photo on a phone.</p>
         </>
       )}
       <div className="mt-5 flex gap-2">

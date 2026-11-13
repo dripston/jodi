@@ -40,7 +40,7 @@ export function Timeline({ entries, deliveryDate, showSubject, emptyTitle = 'No 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {groups.map(([day, items]) => (
         <DayGroup key={day} sticky={sticky} day={day} dateLabel={formatShortDate(items[0]?.created_at ?? deliveryDate)} count={items.length}>
           {items.map((e) => (

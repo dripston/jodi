@@ -1,29 +1,43 @@
+/*
+ * Jodi design tokens: one palette and one type system for the landing page and the app.
+ * Warm cream background, white surfaces, brown ink text, one quiet orange accent.
+ * Red / amber / green are reserved for clinical status; info blue marks ASHA-measured data.
+ */
 :root {
-  --bg: #fafaf9;
+  /* Typography: Inter for interface text, Instrument Serif for display type. */
+  --font-sans: 'Inter', 'Noto Sans Kannada', system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', 'Noto Sans Kannada', Georgia, serif;
+
+  /* Neutrals */
+  --bg: #f7f5f3;
   --surface: #ffffff;
-  --surface-muted: #f5f5f4;
-  --border: #e7e5e4;
-  --border-strong: #d6d3d1;
-  --text: #1c1917;
-  --text-muted: #57534e;
-  --text-subtle: #a8a29e;
-  --brand: #3730a3;
-  --brand-soft: #eef2ff;
-  --focus: #6366f1;
+  --surface-muted: #f2f0ed;
+  --border: #e0dedb;
+  --border-strong: #d1cecc;
+  --text: #37322f;
+  --text-muted: #605a57;
+  --text-subtle: #736d66;
 
-  --red-fg: #b91c1c;
-  --red-bg: #fef2f2;
-  --red-border: #fecaca;
-  --amber-fg: #b45309;
-  --amber-bg: #fffbeb;
-  --amber-border: #fde68a;
-  --green-fg: #15803d;
-  --green-bg: #f0fdf4;
-  --green-border: #bbf7d0;
-  --info-fg: #1d4ed8;
-  --info-bg: #eff6ff;
+  /* Brand: the brown ink for primary actions and active states; orange as a sparing accent. */
+  --brand: #37322f;
+  --brand-soft: #ece7e2;
+  --accent: #e8833a;
+  --focus: #c2621c;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
+  /* Clinical status */
+  --red-fg: #b42318;
+  --red-bg: #fdf3f2;
+  --red-border: #f2c6c1;
+  --amber-fg: #9a5b06;
+  --amber-bg: #fdf6ea;
+  --amber-border: #efd9b0;
+  --green-fg: #2b7448;
+  --green-bg: #f0f7f2;
+  --green-border: #c9e3d2;
+  --info-fg: #2d5591;
+  --info-bg: #eff3f9;
+
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 12px;
 }

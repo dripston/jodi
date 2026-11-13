@@ -11,7 +11,7 @@ export function NotFoundPage() {
       description="Check the address, or go back to the overview."
       action={
         <Button asChild>
-          <Link to="/">Go to overview</Link>
+          <Link to="/app">Go to overview</Link>
         </Button>
       }
     />

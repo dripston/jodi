@@ -1,49 +1,51 @@
-import { Phone, PhoneMissed, PhoneOutgoing, Stethoscope } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useStats } from '@/api/queries';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-function Row({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+function Stat({ label, value, tone }: { label: string; value: number; tone?: 'muted' }) {
   return (
-    <li className="flex items-center gap-3 px-5 py-3">
-      <span className="text-text-muted [&_svg]:size-4">{icon}</span>
-      <span className="text-body text-text">{label}</span>
-      <span className="tabular ml-auto text-h3 text-text">{value}</span>
-    </li>
+    <div className="flex items-baseline justify-between gap-4 py-2.5">
+      <dt className="text-body text-text-muted">{label}</dt>
+      <dd className={tone === 'muted' ? 'tabular text-h3 text-text-muted' : 'tabular text-h3 text-text'}>{value}</dd>
+    </div>
   );
 }
 
 export function TodayPanel() {
   const { data } = useStats();
   const c = data?.calls_today;
-  const pct = c && c.scheduled ? Math.round((c.completed / c.scheduled) * 100) : 0;
+  if (!c || !data) {
+    return (
+      <Card className="space-y-3 p-5">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-6 w-full" />
+        ))}
+      </Card>
+    );
+  }
+  const pct = c.scheduled ? Math.round((c.completed / c.scheduled) * 100) : 0;
+  const missedPct = c.scheduled ? Math.round((c.missed / c.scheduled) * 100) : 0;
   return (
-    <Card>
-      {c && data ? (
-        <>
-          <div className="px-5 pt-5">
-            <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted" role="img" aria-label={`${pct}% of scheduled calls completed`}>
-              <div className="bg-brand transition-all duration-240" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="mt-1.5 text-small text-text-muted">
-              <span className="tabular font-medium text-text">{pct}%</span> of scheduled calls completed
-            </p>
-          </div>
-          <ul className="mt-2 divide-y divide-border">
-            <Row icon={<PhoneOutgoing strokeWidth={1.75} />} label="Calls scheduled" value={c.scheduled} />
-            <Row icon={<Phone strokeWidth={1.75} />} label="Completed" value={c.completed} />
-            <Row icon={<PhoneMissed strokeWidth={1.75} />} label="Missed" value={c.missed} />
-            <Row icon={<Stethoscope strokeWidth={1.75} />} label="ASHA tasks open" value={data.asha_tasks_open} />
-          </ul>
-        </>
-      ) : (
-        <div className="space-y-3 p-5">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-6 w-full" />
-          ))}
-        </div>
-      )}
+    <Card className="p-5">
+      <p className="text-small text-text-muted">Check-in calls</p>
+      <p className="tabular mt-1 text-display text-text">
+        {c.completed}
+        <span className="text-h2 font-normal text-text-subtle"> of {c.scheduled}</span>
+      </p>
+      <div
+        className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-surface-muted"
+        role="img"
+        aria-label={`${pct}% completed, ${missedPct}% missed`}
+      >
+        <div className="rounded-full bg-text" style={{ width: `${pct}%` }} />
+        <div className="rounded-full bg-amber-fg" style={{ width: `${missedPct}%` }} />
+      </div>
+      <dl className="mt-4 divide-y divide-border">
+        <Stat label="Completed" value={c.completed} />
+        <Stat label="Missed, retry scheduled" value={c.missed} />
+        <Stat label="Still to call" value={Math.max(0, c.scheduled - c.completed - c.missed)} tone="muted" />
+        <Stat label="ASHA tasks open" value={data.asha_tasks_open} />
+      </dl>
     </Card>
   );
 }

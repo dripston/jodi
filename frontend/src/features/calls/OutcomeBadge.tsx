@@ -4,11 +4,11 @@ import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { OUTCOME_LABELS } from '@/lib/labels';
 
 const STYLE: Record<CallOutcome, { icon: typeof Siren; tone: BadgeProps['tone'] }> = {
-  completed: { icon: CircleCheck, tone: 'neutral' },
+  completed: { icon: CircleCheck, tone: 'plain' },
   red_flag: { icon: Siren, tone: 'red' },
   amber_flag: { icon: TriangleAlert, tone: 'amber' },
-  no_answer: { icon: PhoneMissed, tone: 'outline' },
-  wrong_person: { icon: UserX, tone: 'outline' },
+  no_answer: { icon: PhoneMissed, tone: 'neutral' },
+  wrong_person: { icon: UserX, tone: 'neutral' },
 };
 
 export function OutcomeBadge({ outcome }: { outcome: CallOutcome }) {

@@ -21,14 +21,14 @@ export function AshaTopFive({ asha, highlightId }: { asha: Asha; highlightId: st
           ? data.slice(0, 5).map((item) => (
               <li
                 key={item.mother.id}
-                className={cn('flex items-center gap-3 px-5 py-3 transition-colors duration-240', item.mother.id === highlightId && 'bg-brand-soft')}
+                className={cn('flex items-center gap-3 px-5 py-3 transition-colors duration-240', item.mother.id === highlightId && 'bg-surface-muted')}
               >
-                <span className="tabular w-5 text-h3 text-text-subtle">{item.priority}</span>
+                <span className="tabular w-5 self-start text-h2 text-text-subtle">{item.priority}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-body font-medium text-text">{item.mother.name}</p>
-                  <p className="truncate text-small text-text-muted">{item.reason}</p>
+                  <p className="line-clamp-2 text-small text-text-muted">{item.reason}</p>
                 </div>
-                <StatusPill level={dyadLevel(item.mother, item.baby)} size="sm" />
+                <StatusPill level={dyadLevel(item.mother, item.baby)} size="sm" className="self-start" />
               </li>
             ))
           : [0, 1, 2].map((i) => (

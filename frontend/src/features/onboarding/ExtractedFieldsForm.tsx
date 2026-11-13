@@ -15,9 +15,9 @@ interface FieldRowProps {
 
 function FieldRow({ label, value, confidence, confirmed }: FieldRowProps) {
   return (
-    <div className="grid grid-cols-5 items-start gap-4 px-5 py-3">
-      <dt className="col-span-2 text-small text-text-muted">{label}</dt>
-      <dd className="col-span-3 space-y-1.5">
+    <div className="grid grid-cols-1 items-start gap-1 px-5 py-3 sm:grid-cols-5 sm:gap-4">
+      <dt className="text-small text-text-muted sm:col-span-2">{label}</dt>
+      <dd className="space-y-1.5 sm:col-span-3">
         <p className="text-body font-medium text-text">{value ?? <span className="text-text-subtle">Not found on slip</span>}</p>
         {confirmed ? (
           <Badge tone="green">

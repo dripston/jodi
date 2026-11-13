@@ -12,7 +12,7 @@ export function ProfileRail({ mother }: { mother: Mother }) {
   const audit = useAudit(mother.id);
   const open = tickets.data?.filter((t) => t.mother_id === mother.id) ?? [];
   return (
-    <aside className="space-y-4 lg:w-rail lg:shrink-0" aria-label="Summary">
+    <aside className="space-y-4 lg:sticky lg:top-20 lg:w-rail lg:shrink-0" aria-label="Summary">
       {open.map((t) => (
         <AlertCard key={t.id} ticket={t} mother={mother} compact />
       ))}

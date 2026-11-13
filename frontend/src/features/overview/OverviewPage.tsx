@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Download } from 'lucide-react';
 import { useTickets } from '@/api/queries';
 import { useMotherIndex } from '@/api/useMotherIndex';
@@ -13,11 +14,13 @@ import { TodayPanel } from './TodayPanel';
 export function OverviewPage() {
   const tickets = useTickets('open');
   const mothers = useMotherIndex();
+  const live = tickets.data?.filter((t) => t.state !== 'reached');
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
-        title="Overview"
-        description="Demo District · last 42 days"
+        eyebrow={format(new Date(), 'EEEE, d MMMM')}
+        title="How are our mothers and babies today?"
+        description="Demo District · every enrolled family across the 42 days after delivery."
         actions={
           <Button icon={<Download strokeWidth={1.75} />} onClick={() => toast('Export is not available in the pilot yet')}>
             Export
@@ -25,10 +28,14 @@ export function OverviewPage() {
         }
       />
       <KpiRow />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Needs attention now" description="Urgent first, then needs check today" className="lg:col-span-2">
+      <div className="grid gap-10 lg:grid-cols-3 lg:gap-8">
+        <Section
+          title="Needs attention now"
+          description="Urgent first, then needs check today. Reached families drop off this list."
+          className="lg:col-span-2"
+        >
           <AlertList
-            tickets={tickets.data}
+            tickets={live}
             mothers={mothers}
             loading={tickets.isLoading}
             error={tickets.isError}
@@ -38,7 +45,7 @@ export function OverviewPage() {
             compact
           />
         </Section>
-        <Section title="Today" description="Calls and ASHA work across the district">
+        <Section title="Today" description="Calls and ASHA work">
           <TodayPanel />
         </Section>
       </div>

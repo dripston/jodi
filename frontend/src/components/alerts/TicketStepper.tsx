@@ -18,20 +18,20 @@ export function TicketStepper({ state }: { state: TicketState }) {
               <span
                 className={cn(
                   'flex size-5 items-center justify-center rounded-full border transition-colors duration-180',
-                  done && 'border-brand bg-brand text-white',
-                  active && 'border-brand bg-surface ring-2 ring-brand-soft',
+                  done && 'border-text bg-text text-white',
+                  active && 'border-brand bg-surface ring-4 ring-brand-soft',
                   !done && !active && 'border-border bg-surface',
                 )}
               >
                 {done ? <Check className="size-3" strokeWidth={2.5} aria-hidden /> : null}
-                {active ? <span className="size-1.5 rounded-full bg-brand" aria-hidden /> : null}
+                {active ? <span className="size-2 rounded-full bg-brand" aria-hidden /> : null}
               </span>
-              <span className={cn('text-caption', done || active ? 'text-text' : 'text-text-subtle')}>
+              <span className={cn('whitespace-nowrap text-caption', active ? 'text-brand' : done ? 'text-text' : 'text-text-subtle')}>
                 {TICKET_STATE_LABELS[step]}
               </span>
             </div>
             {i < STEPS.length - 1 ? (
-              <span aria-hidden className={cn('mx-1 mb-5 h-px flex-1', i < current ? 'bg-brand' : 'bg-border')} />
+              <span aria-hidden className={cn('mx-1 mb-5 h-px flex-1', i < current ? 'bg-text' : 'bg-border')} />
             ) : null}
           </li>
         );
