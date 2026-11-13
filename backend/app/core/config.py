@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -11,9 +12,13 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = BACKEND_DIR.parent
 
 
+# Tests set JODI_NO_DOTENV=1 so real keys / phones in .env never reach the test run.
+_ENV_FILES = () if os.environ.get("JODI_NO_DOTENV") else (str(REPO_ROOT / ".env"), str(BACKEND_DIR / ".env"))
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(str(REPO_ROOT / ".env"), str(BACKEND_DIR / ".env")),
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
         env_ignore_empty=True,  # `SARVAM_OUTBOUND_URL=` (copied from .env.example) keeps the default
@@ -47,6 +52,12 @@ class Settings(BaseSettings):
     telegram_timeout_s: float = 8.0
     telegram_poll_timeout_s: int = 25
     docai_poll_max_s: float = 60.0
+
+    # Real demo phones (teammates' own numbers) for live calls. Kept only in .env, never committed;
+    # empty = the synthetic +91980000000x numbers. Patient data stays synthetic either way.
+    demo_mother_phone: str = ""  # phone A (Lakshmi)
+    demo_husband_phone: str = ""  # phone B (Ravi)
+    demo_asha_phone: str = ""  # phone C (ASHA Sunita)
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'jodi.db').as_posix()}"
     scheduler_enabled: bool = True
