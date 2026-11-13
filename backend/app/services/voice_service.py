@@ -227,7 +227,15 @@ def _call_summary(mother: Mother | None, result: assessment_service.PipelineResu
 async def on_end(s: Session, body: OnEndIn, now: datetime) -> dict[str, object]:
     done = s.get(ProcessedInteraction, body.interaction_id)
     if done:
-        return dict(done.result)
+        # Sarvam's on-end hook carries no transcript; the post-call webhook brings it a moment later.
+        # Process that transcript once instead of dropping it as a duplicate (everything below is idempotent).
+        prev = rrepo.call_log(s, body.interaction_id)
+        late_transcript = (body.answered and body.transcript.strip() and prev is not None
+                           and not (prev.transcript or "").strip())  # fmt: skip
+        if not late_transcript:
+            return dict(done.result)
+        s.delete(done)
+        s.commit()
     call = rrepo.call_log(s, body.interaction_id) or call_service.bind_on_start(
         s, body.interaction_id, body.phone or "", None, now)  # fmt: skip
     phone = body.phone or call.phone or ""
@@ -252,7 +260,12 @@ async def on_end(s: Session, body: OnEndIn, now: datetime) -> dict[str, object]:
                 maybe_family_ack(s, mother, body.transcript, phone, now, False, body.interaction_id)
         call.outcome = body.outcome() or _outcome(result)
         call.summary = _call_summary(mother, result, now)
-        if mother is not None and result is not None and result.level == "green" and call.purpose == "checkin":
+        if (
+            mother is not None
+            and result is not None
+            and result.level == "green"
+            and call.purpose in ("checkin", "onboarding")
+        ):
             from app.services import telegram_alerts
 
             await telegram_alerts.notify_status_green(s, mother, now)

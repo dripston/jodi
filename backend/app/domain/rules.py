@@ -366,6 +366,17 @@ RULE_FACT_CODES: dict[str, dict[str, frozenset[str]]] = {
 }  # fmt: skip
 
 
+RULE_LEVELS: dict[str, str] = {r[0]: r[1] for r in MOTHER_RULES + BABY_RULES} | {
+    "D-INF-01": "amber", "D-FEED-01": "amber", "D-JAUN-01": "red", "K-SAFETY-01": "red",
+}  # fmt: skip
+
+
+def level_for_rules(rule_ids: Iterable[str]) -> str:
+    """Highest level among the rules (green when none fired)."""
+    levels = {RULE_LEVELS.get(r, "green") for r in rule_ids}
+    return "red" if "red" in levels else "amber" if "amber" in levels else "green"
+
+
 def rules_for_fact(subject: str, code: str | None, fired_rule_ids: Iterable[str]) -> list[str]:
     """The fired rules (in firing order) that read this fact. History/dismissal/keyword rules are not per-fact."""
     if not code:

@@ -104,6 +104,7 @@ class EntryOut(BaseModel):
     prev_hash: str
     hash: str
     rule_ids: list[str] = Field(default_factory=list)  # additive (§2): rules this fact triggered; not hashed
+    level: str | None = None  # additive: green/amber/red for a symptom or vital (from its rules); None for notes
 
 
 class TicketHistoryItem(BaseModel):

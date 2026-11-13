@@ -45,7 +45,7 @@ export const useTimeline = (id: string, enabled = true) =>
   });
 
 export const useAudit = (id: string) =>
-  useQuery({ queryKey: queryKeys.audit(id), queryFn: () => api.getAudit(id), ...LIVE });
+  useQuery({ queryKey: queryKeys.audit(id), queryFn: () => api.getAudit(id), enabled: id !== '', ...LIVE });
 
 export const useVitals = (id: string) =>
   useQuery({ queryKey: queryKeys.vitals(id), queryFn: () => api.getVitals(id), ...LIVE });

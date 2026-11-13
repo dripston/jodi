@@ -445,3 +445,28 @@ def test_next_call_knows_her_previous_symptoms(client, clock):
     assert "blurred vision (yesterday)" in ctx["previous_symptoms"]
     assert "fever" not in ctx["previous_symptoms"]
     assert ctx["last_summary"].startswith("Recently reported symptoms: ")
+
+
+def test_post_call_webhook_transcript_is_processed_after_an_empty_on_end(client):
+    from tests.conftest import AUTH as _AUTH
+
+    start(client, "int_late", direction="outbound")
+    client.post("/hooks/on-end", headers=_AUTH, json={"phone": LAKSHMI, "interaction_id": "int_late", "transcript": ""})
+    assert not [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_late"]
+    secret = "test-secret"
+    payload = {"attempt_id": "a1", "interaction_id": "int_late", "status": "connected", "duration": 60,
+               "interaction_transcript": [{"role": "agent", "en_text": "How many pads since morning?"},
+                                          {"role": "user", "en_text": "4 pads soaked since morning"}],
+               "metadata": {"token": secret}}  # fmt: skip
+    assert client.post("/hooks/sarvam-webhook", json=payload).status_code == 200
+    mine = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_late"]
+    assert mine and any(e["level"] == "amber" for e in mine)  # the answer reached her record, coloured
+
+
+def test_timeline_entries_have_levels(client):
+    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_lv")
+    tl = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_lv"]
+    assert any(e["level"] == "red" for e in tl)
+    assess(client, "User: jvara illa", "int_lv2")
+    tl2 = [e for e in client.get("/api/mothers/m_001/timeline").json() if e["interaction_id"] == "int_lv2"]
+    assert tl2 and all(e["level"] == "green" for e in tl2 if e["kind"] in ("symptom", "vital"))

@@ -96,6 +96,7 @@ export const EntrySchema = z.object({
   hash: z.string(),
   // Not in the contract yet; requested in docs/requests.md. Absent = no rule chip.
   rule_ids: z.array(z.string()).optional(),
+  level: LevelSchema.nullish(),
 });
 
 export const TicketHistoryItemSchema = z.object({

@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from app.core.time import day_since_delivery, iso
 from app.db.models import Asha, Baby, CallLog, Entry, Mother, Ticket
-from app.domain.rules import rules_for_fact
+from app.domain.rules import level_for_rules, rules_for_fact
 from app.repositories import mothers as mrepo
 from app.repositories import records as rrepo
 from app.schemas.api import (
@@ -53,7 +53,8 @@ def entry_out(e: Entry, fired: dict[str, list[str]] | None = None) -> EntryOut:
     rule_ids: list[str] = []
     if fired and e.interaction_id and not (e.value or "").startswith("no "):
         rule_ids = rules_for_fact(e.subject, e.code, fired.get(e.interaction_id, []))
-    return EntryOut(**e.model_dump(exclude={"seq"}), rule_ids=rule_ids)  # type: ignore[arg-type]
+    level = level_for_rules(rule_ids) if e.kind in ("symptom", "vital") else None
+    return EntryOut(**e.model_dump(exclude={"seq"}), rule_ids=rule_ids, level=level)  # type: ignore[arg-type]
 
 
 def entry_hash_body(e: Entry) -> dict[str, object]:

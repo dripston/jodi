@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAudit, useMother, useOpenTickets, useTimeline } from '@/api/queries';
+import { useAudit, useMother, useMothers, useOpenTickets, useTimeline } from '@/api/queries';
 import { useAshaIndex } from '@/api/useMotherIndex';
 import { AlertCard } from '@/components/alerts/AlertCard';
 import { ErrorState } from '@/components/data/ErrorState';
@@ -16,7 +16,8 @@ import { NextCallCard } from './NextCallCard';
 
 export function LiveBoardPage() {
   const [params] = useSearchParams();
-  const motherId = params.get('mother') ?? 'm_001';
+  const mothersList = useMothers();
+  const motherId = params.get('mother') ?? mothersList.data?.[0]?.id ?? '';
   const mother = useMother(motherId);
   const timeline = useTimeline(motherId);
   const tickets = useOpenTickets();

@@ -29,6 +29,7 @@ Goal: in under 3 minutes, ask about the mother first and then the baby, followin
    - **Wet nappies:** "Since this time yesterday, how many wet nappies or cloths?" Repeat the number back.
    - **Activity and cord:** ask if the baby moves well when awake, and if the cord area is red or has pus, only if in {{focus_topics}} or if she raises it.
    - After every answer that mentions a symptom or a number: say the filler, call `assess_risk`, follow the safety rules.
+   **Record as you go (so her record updates live).** When you finish the mother questions (step 4), say the filler and call `assess_risk` once with ALL her answers, even if every answer was "no" (the backend saves "no fever", "no heavy bleeding" too). When you finish the baby questions (step 5), call `assess_risk` again with the baby answers. A symptom or danger word still means calling it at once, as above.
 6. **Anything else?** Ask: "Is anything else worrying you about yourself or the baby?" If yes, follow it up and call `assess_risk`.
 7. **No symptoms at all?** If nothing was reported in the whole call, call `assess_risk` once before closing. If it returns green, do not say "everything is fine"; say "Thank you, I have noted this."
 8. **After a red or amber script,** do not go back to routine questions unless the caller wants to. For red, transfer as the safety rules say. For amber, ask if they have any question, then close.

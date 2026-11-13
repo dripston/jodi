@@ -1,5 +1,5 @@
 import { ShieldAlert, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAudit, useMothers, useTimeline } from '@/api/queries';
 import { ChainBadge } from '@/components/status/ChainBadge';
 import { ErrorState } from '@/components/data/ErrorState';
@@ -12,7 +12,12 @@ import { ChainTable } from './ChainTable';
 
 export function AuditPage() {
   const mothers = useMothers();
-  const [motherId, setMotherId] = useState('m_001');
+  const [motherId, setMotherId] = useState('');
+  useEffect(() => {
+    const list = mothers.data ?? [];
+    const first = list[0];
+    if (first && !list.some((m) => m.id === motherId)) setMotherId(first.id);
+  }, [mothers.data, motherId]);
   const audit = useAudit(motherId);
   const timeline = useTimeline(motherId);
   const [verifiedAt, setVerifiedAt] = useState<Date | null>(null);
