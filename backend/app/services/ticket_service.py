@@ -11,6 +11,7 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
+from app.core.config import get_settings
 from app.core.errors import DomainError
 from app.core.logging import log, mask_phone
 from app.db.models import AshaTask, Mother, Ticket, TicketEvent
@@ -52,7 +53,7 @@ async def _notify_contact(s: Session, t: Ticket, mother: Mother, contact: str, n
         note = "ASHA alerted (visit task)"
     elif contact.startswith("anm:"):
         note = "ANM escalation (placeholder: no ANM configured)"
-    elif live:
+    elif live and get_settings().family_contact == "transfer":
         note = f"family {mask_phone(contact)} connected by call transfer"
     else:
         try:

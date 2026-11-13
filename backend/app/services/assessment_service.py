@@ -221,6 +221,8 @@ def _transfer_to(s: Session, mother: Mother | None, level: str, caller: str | No
                  live: bool) -> str | None:  # fmt: skip
     if level != "red" or mother is None or not live or purpose == "family_alert":
         return None
+    if get_settings().family_contact != "transfer":  # the backend phones the family instead (ticket_service)
+        return None
     for f in sorted(mrepo.family_of(s, mother.id), key=lambda f: not f.decision_maker):
         if f.phone != caller:
             return f.phone

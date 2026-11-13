@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     sarvam_workspace_id: str = ""
     sarvam_agent_id: str = ""
     sarvam_from_number: str = ""
+    # Red alert, family step during a live call: "call" = the backend phones the decision-maker and Jodi
+    # talks to them (family_alert playbook); "transfer" = Jodi bridges the mother's call to them.
+    family_contact: str = "call"
     sarvam_agent_version: int = 1
     sarvam_connection_id: str = ""  # telephony connection id (dashboard → Deploy with Code recipe)
     # Instant Outbound URL; {org_id} / {workspace_id} / {agent_id} placeholders are filled in.

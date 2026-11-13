@@ -117,6 +117,19 @@ def test_red_bleed_reads_fixed_script_and_transfers(client):
     assert lak["state"] == "notified" and "asha:a_001" in lak["assigned_to"]
 
 
+def test_red_bleed_call_mode_phones_the_family_instead_of_transfer(client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "family_contact", "call")
+    placed = get_integrations().call_placer.placed
+    n = len(placed)
+    r = assess(client, "User: ondu ghante alli batte poora odde aaytu")
+    assert r["level"] == "red" and r["transfer_to"] is None  # Jodi stays with the mother
+    assert any(p[0] == RAVI and p[1] == "family_alert" for p in placed[n:])  # Jodi phones the husband
+    lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
+    assert any("family alert call placed" in h["note"] for h in lak["history"])
+
+
 def test_safety_net_fires_even_if_llm_fails(client, monkeypatch):
     async def boom(*_a, **_k):
         raise ExtractionError("down")
