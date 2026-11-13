@@ -1,0 +1,5 @@
+# SQLite database + WAL side files (local demo data, never commit)
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
