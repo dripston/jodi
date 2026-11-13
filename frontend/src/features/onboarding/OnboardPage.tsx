@@ -8,6 +8,7 @@ import { Card, CardFooter, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Dropzone } from './Dropzone';
+import { OnboardSteps } from './OnboardSteps';
 import { ExtractedFieldsForm } from './ExtractedFieldsForm';
 import { useOnboardingFlow } from './useOnboardingFlow';
 
@@ -17,9 +18,10 @@ export function OnboardPage() {
   return (
     <>
       <PageHeader title="Onboard a mother" description="Read the discharge slip, then Jodi confirms every detail with her on a call." />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <OnboardSteps stage={flow.stage} />
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Discharge slip" description="Step 1 · photo of the paper slip" />
+          <CardHeader title="Discharge slip" description="Use synthetic demo slips only" />
           <div className="space-y-4 p-5">
             <div>
               <label htmlFor="phone" className="text-small text-text-muted">Mother's phone number</label>
@@ -29,7 +31,7 @@ export function OnboardPage() {
           </div>
         </Card>
         <Card className="flex flex-col">
-          <CardHeader title="Extracted details" description="Step 2 · check, then confirm by voice" />
+          <CardHeader title="What Jodi read" description="Nothing is saved until the mother confirms on the call" />
           <div className="mt-3 flex-1">
             {flow.stage === 'idle' ? (
               <EmptyState icon={FileSearch} title="Nothing read yet" description="Upload a slip and the details appear here for checking." />
@@ -56,7 +58,7 @@ export function OnboardPage() {
             ) : (
               <>
                 <span className="text-small text-text-muted">
-                  {flow.stage === 'calling' ? 'Waiting for her to confirm on the call…' : 'Nothing is saved until she confirms.'}
+                  {flow.stage === 'calling' ? 'Calling now. Waiting for her to confirm…' : flow.stage === 'review' ? 'Fields marked Check need a closer look.' : 'Upload a slip to continue.'}
                 </span>
                 <Button
                   variant="primary"

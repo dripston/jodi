@@ -1,4 +1,4 @@
-import { ArrowLeft, UserX } from 'lucide-react';
+import { UserX } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useMother } from '@/api/queries';
 import { useAshaIndex } from '@/api/useMotherIndex';
@@ -36,14 +36,10 @@ export function MotherProfilePage() {
 
   const asha = data?.mother.asha_id ? ashas.get(data.mother.asha_id) : undefined;
   return (
-    <div className="space-y-6">
-      <Link to="/mothers" className="inline-flex items-center gap-1.5 text-small text-text-muted hover:text-text">
-        <ArrowLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        All mothers
-      </Link>
+    <div className="space-y-8">
       {isLoading || !data ? <DyadHeaderSkeleton /> : <DyadHeader mother={data.mother} baby={data.baby} asha={asha} pulse />}
       {data ? (
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <Tabs defaultValue="timeline" className="min-w-0 flex-1">
             <TabsList>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -52,7 +48,7 @@ export function MotherProfilePage() {
               <TabsTrigger value="calls">Calls</TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
             </TabsList>
-            <TabsContent value="timeline"><TimelineTab motherId={id} deliveryDate={data.mother.delivery_date} /></TabsContent>
+            <TabsContent value="timeline"><TimelineTab motherId={id} deliveryDate={data.mother.delivery_date} today={data.mother.day_since_delivery} /></TabsContent>
             <TabsContent value="vitals"><VitalsTab motherId={id} /></TabsContent>
             <TabsContent value="alerts"><AlertsTab mother={data.mother} /></TabsContent>
             <TabsContent value="calls"><CallsTab motherId={id} /></TabsContent>

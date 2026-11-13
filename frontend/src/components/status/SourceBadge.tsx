@@ -4,12 +4,12 @@ import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { SOURCE_LABELS } from '@/lib/labels';
 
 const STYLE: Record<Source, { icon: typeof BadgeCheck; tone: BadgeProps['tone'] }> = {
-  mother_reported: { icon: MessageCircle, tone: 'outline' },
-  family_reported: { icon: Users, tone: 'outline' },
+  mother_reported: { icon: MessageCircle, tone: 'plain' },
+  family_reported: { icon: Users, tone: 'plain' },
   asha_measured: { icon: Stethoscope, tone: 'info' },
   doctor_verified: { icon: BadgeCheck, tone: 'brand' },
   document_extracted: { icon: FileText, tone: 'neutral' },
-  system: { icon: Cpu, tone: 'neutral' },
+  system: { icon: Cpu, tone: 'plain' },
 };
 
 export function SourceBadge({ source }: { source: Source }) {

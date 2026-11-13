@@ -3,6 +3,7 @@ import { useMotherIndex } from '@/api/useMotherIndex';
 import { ErrorState } from '@/components/data/ErrorState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { CallsSummary } from './CallsSummary';
 import { CallsTable } from './CallsTable';
 
 export function CallsPage() {
@@ -10,8 +11,9 @@ export function CallsPage() {
   const mothers = useMotherIndex();
   return (
     <>
-      <PageHeader title="Calls" description="The last 20 calls Jodi placed or received. Open a call to read the transcript." />
+      <PageHeader title="Calls" description="The last 20 calls Jodi placed or received. Select a call to read the transcript and the facts Jodi heard." />
       {isError ? <ErrorState className="mb-4" onRetry={() => void refetch()} /> : null}
+      {data ? <CallsSummary calls={data} /> : null}
       <Card className="overflow-hidden">
         <CallsTable calls={data} loading={isLoading} mothers={mothers} />
       </Card>

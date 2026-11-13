@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
-import { titleFor } from '@/components/layout/nav';
+import { sectionFor, titleFor } from '@/components/layout/nav';
 import { PageSkeleton } from './PageSkeleton';
 
 export function AppShell() {
@@ -38,8 +38,8 @@ export function AppShell() {
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={titleFor(pathname)} onMenu={() => setMenuOpen(true)} />
-        <main className="mx-auto w-full max-w-content flex-1 p-4 md:p-8">
+        <Topbar title={titleFor(pathname)} section={sectionFor(pathname)} onMenu={() => setMenuOpen(true)} />
+        <main className="mx-auto w-full max-w-content flex-1 px-4 pb-16 pt-6 md:px-8 md:pt-10">
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
           </Suspense>

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/data/EmptyState';
 import { ErrorState } from '@/components/data/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AshaHeader } from './AshaHeader';
+import { AshaShell } from './AshaShell';
 import { AshaVisitCard } from './AshaVisitCard';
 
 export function AshaListPage() {
@@ -16,15 +17,17 @@ export function AshaListPage() {
   const asha = useAshaIndex().get(id);
   const urgent = list.data?.filter((x) => x.reason !== 'Routine visit').length ?? 0;
   return (
-    <div className="mx-auto min-h-screen max-w-120 bg-bg">
+    <AshaShell>
       <AshaHeader back={{ to: '/ashas', label: 'All ASHAs' }}>
-        <h1 className="text-h1 text-text">{asha ? `${asha.name}'s visits` : 'Visits'}</h1>
-        <p className="text-small text-text-muted">
-          {format(new Date(), 'EEEE, d MMM')}
-          {list.data ? ` · ${list.data.length} families · ${urgent} need you today` : ''}
-        </p>
+        <h1 className="text-title text-text">{asha ? `${asha.name}'s visits` : 'Visits'}</h1>
+        <p className="mt-1 text-body text-text-muted">{format(new Date(), 'EEEE, d MMMM')}</p>
+        {list.data ? (
+          <p className="mt-3 text-body-lg text-text">
+            <span className="tabular font-semibold">{urgent}</span> of {list.data.length} families need you today
+          </p>
+        ) : null}
       </AshaHeader>
-      <main className="space-y-3 p-4">
+      <main className="space-y-3 p-4 pb-12">
         {list.isError ? <ErrorState onRetry={() => void list.refetch()} /> : null}
         {list.isLoading ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-40 rounded" />) : null}
         {list.data?.length === 0 ? (
@@ -39,6 +42,6 @@ export function AshaListPage() {
           />
         ))}
       </main>
-    </div>
+    </AshaShell>
   );
 }

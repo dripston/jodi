@@ -37,12 +37,13 @@ export function MothersPage() {
 
   return (
     <>
-      <PageHeader title="Mothers" description="Every enrolled mother and baby, with today's status." />
+      <PageHeader title="Mothers" description="Every enrolled mother and baby, with today's status. Select a row for a quick look." actions={data ? <span className="tabular text-small text-text-muted">{data.length} {data.length === 1 ? 'family' : 'families'}</span> : null} />
       {isError ? <ErrorState className="mb-4" onRetry={() => void refetch()} /> : null}
       <Card className="overflow-hidden">
         <MotherFilters value={filters} onChange={setFilters} ashas={ashas.data ?? []} focusSearch={params.get('focus') === 'search'} />
         <DataTable
           columns={motherColumns(ashaMap)}
+          rowClassName={(m) => (m.status === 'red' || m.baby?.status === 'red' ? 'shadow-urgent-row' : undefined)}
           rows={data}
           loading={isLoading}
           rowKey={(m) => m.id}

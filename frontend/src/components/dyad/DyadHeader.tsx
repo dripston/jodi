@@ -39,7 +39,7 @@ export function DyadHeader({ mother, baby, asha, pulse, compact }: DyadHeaderPro
         <BabyMeta baby={baby} mother={mother} pulse={pulse} />
       </div>
       {compact ? null : (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border bg-surface-muted px-5 py-3 text-small text-text-muted">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-border px-5 py-3.5 text-small text-text-muted md:px-6">
           {asha ? (
             <span className="inline-flex items-center gap-1.5">
               <Stethoscope className="size-4" strokeWidth={1.75} aria-hidden />

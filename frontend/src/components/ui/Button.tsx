@@ -5,14 +5,16 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 export const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded font-medium transition-colors duration-120 ease-standard disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded font-medium transition-colors duration-120 ease-standard disabled:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        primary: 'bg-brand text-white hover:opacity-90',
-        secondary: 'border border-border-strong bg-surface text-text hover:bg-surface-muted',
-        ghost: 'text-text-muted hover:bg-surface-muted hover:text-text',
-        danger: 'bg-red-fg text-white hover:opacity-90',
+        primary:
+          'bg-brand text-white shadow-raised hover:opacity-90 disabled:bg-surface-muted disabled:text-text-subtle disabled:shadow-none',
+        secondary:
+          'border border-border-strong bg-surface text-text shadow-raised hover:border-text-subtle hover:bg-surface-muted disabled:text-text-subtle disabled:shadow-none',
+        ghost: 'text-text-muted hover:bg-surface-muted hover:text-text disabled:text-text-subtle',
+        danger: 'bg-red-fg text-white hover:opacity-90 disabled:opacity-50',
       },
       size: {
         sm: 'h-8 px-3 text-small',

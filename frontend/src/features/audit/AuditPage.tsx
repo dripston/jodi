@@ -1,6 +1,7 @@
 import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useAudit, useMothers, useTimeline } from '@/api/queries';
+import { ChainBadge } from '@/components/status/ChainBadge';
 import { ErrorState } from '@/components/data/ErrorState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -26,7 +27,7 @@ export function AuditPage() {
     <>
       <PageHeader
         title="Record log"
-        description="Every entry is sealed in a hash chain. Any change to a past entry breaks the chain."
+        description="Every entry is sealed to the one before it. If anyone edits a past entry, the seal breaks and the record shows exactly where."
         actions={
           <>
             <Select
@@ -64,7 +65,16 @@ export function AuditPage() {
         </div>
       ) : null}
       <Card className="overflow-hidden">
-        <ChainTable entries={timeline.data} brokenAt={result?.broken_at ?? null} loading={timeline.isLoading} />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+          <p className="text-h3 text-text">{mothers.data?.find((m) => m.id === motherId)?.name ?? 'Record'}</p>
+          <ChainBadge audit={result} loading={audit.isLoading} />
+        </div>
+        <ChainTable
+          entries={timeline.data}
+          brokenAt={result?.broken_at ?? null}
+          loading={timeline.isLoading}
+          deliveryDate={mothers.data?.find((m) => m.id === motherId)?.delivery_date}
+        />
       </Card>
     </>
   );

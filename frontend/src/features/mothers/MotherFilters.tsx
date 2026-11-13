@@ -27,8 +27,8 @@ export function MotherFilters({ value, onChange, ashas, focusSearch }: MotherFil
   }, [focusSearch]);
   const set = <K extends keyof FilterState>(k: K, v: FilterState[K]) => onChange({ ...value, [k]: v });
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
-      <div className="relative w-full sm:w-64">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-4">
+      <div className="relative w-full sm:w-72">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-subtle" strokeWidth={1.75} aria-hidden />
         <Input ref={ref} aria-label="Search by name or last 4 digits" placeholder="Name or last 4 digits" className="pl-9" value={value.q} onChange={(e) => set('q', e.target.value)} />
       </div>
@@ -46,8 +46,8 @@ export function MotherFilters({ value, onChange, ashas, focusSearch }: MotherFil
         aria-pressed={value.highRisk}
         onClick={() => set('highRisk', !value.highRisk)}
         className={cn(
-          'h-9 rounded-sm border px-3 text-body transition-colors duration-120',
-          value.highRisk ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong bg-surface text-text hover:bg-surface-muted',
+          'h-9 cursor-pointer rounded-sm border px-3 text-body transition-colors duration-120',
+          value.highRisk ? 'border-amber-border bg-amber-bg text-amber-fg' : 'border-border-strong bg-surface text-text-muted hover:bg-surface-muted hover:text-text',
         )}
       >
         High-risk only

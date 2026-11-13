@@ -4,18 +4,20 @@ import { cn } from '@/lib/cn';
 interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
+  eyebrow?: ReactNode;
   actions?: ReactNode;
   className?: string;
 }
 
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, description, eyebrow, actions, className }: PageHeaderProps) {
   return (
-    <header className={cn('mb-6 flex flex-wrap items-end justify-between gap-4', className)}>
-      <div className="min-w-0">
-        <h1 className="text-h1 text-text">{title}</h1>
-        {description ? <p className="mt-1 text-small text-text-muted">{description}</p> : null}
+    <header className={cn('mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4', className)}>
+      <div className="min-w-0 max-w-prose">
+        {eyebrow ? <p className="mb-2 text-eyebrow text-text-subtle">{eyebrow}</p> : null}
+        <h1 className="text-title text-text">{title}</h1>
+        {description ? <p className="mt-2 text-body-lg text-text-muted">{description}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }

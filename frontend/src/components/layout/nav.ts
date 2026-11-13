@@ -17,22 +17,44 @@ export interface NavItem {
   badge?: 'alerts';
 }
 
-export const PRIMARY_NAV: NavItem[] = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard },
-  { to: '/alerts', label: 'Alerts', icon: Siren, badge: 'alerts' },
-  { to: '/mothers', label: 'Mothers', icon: Users },
-  { to: '/onboard', label: 'Onboard', icon: FileUp },
-  { to: '/ashas', label: 'ASHAs', icon: Stethoscope },
-  { to: '/calls', label: 'Calls', icon: Phone },
-];
+export interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
 
-export const SECONDARY_NAV: NavItem[] = [
-  { to: '/live', label: 'Live demo', icon: Activity },
-  { to: '/audit', label: 'Record log', icon: ScrollText },
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Programme',
+    items: [
+      { to: '/', label: 'Overview', icon: LayoutDashboard },
+      { to: '/alerts', label: 'Alerts', icon: Siren, badge: 'alerts' },
+      { to: '/mothers', label: 'Mothers', icon: Users },
+      { to: '/calls', label: 'Calls', icon: Phone },
+    ],
+  },
+  {
+    label: 'Field work',
+    items: [
+      { to: '/onboard', label: 'Onboard', icon: FileUp },
+      { to: '/ashas', label: 'ASHAs', icon: Stethoscope },
+    ],
+  },
+  {
+    label: 'Records and demo',
+    items: [
+      { to: '/audit', label: 'Record log', icon: ScrollText },
+      { to: '/live', label: 'Live demo', icon: Activity },
+    ],
+  },
 ];
 
 export function titleFor(pathname: string): string {
-  const all = [...PRIMARY_NAV, ...SECONDARY_NAV];
-  if (pathname.startsWith('/mothers/')) return 'Mother and baby';
+  if (pathname.startsWith('/mothers/')) return 'Mother and baby record';
+  const all = NAV_GROUPS.flatMap((g) => g.items);
   return all.find((n) => (n.to === '/' ? pathname === '/' : pathname.startsWith(n.to)))?.label ?? 'Jodi';
+}
+
+export function sectionFor(pathname: string): string | null {
+  if (pathname.startsWith('/mothers/')) return 'Mothers';
+  return null;
 }

@@ -28,24 +28,21 @@ export function DemoControls({ mother, asha, audit, hidden }: DemoControlsProps)
     );
 
   return (
-    <footer className="flex items-center gap-4 border-t border-border bg-surface px-6 py-3">
+    <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border bg-surface px-4 py-3 md:px-6">
       <ChainBadge audit={audit} />
       {hidden ? (
-        <span className="ml-auto text-caption text-text-subtle">
-          Press <Kbd>H</Kbd> for demo controls
+        <span className="ml-auto inline-flex items-center gap-1.5 text-caption font-normal text-text-subtle">
+          Press <Kbd>H</Kbd> to show demo controls
         </span>
       ) : (
         <div className="ml-auto flex flex-wrap items-center gap-2" role="toolbar" aria-label="Demo controls">
-          <Button size="sm" variant="ghost" icon={<RotateCcw strokeWidth={1.75} />} loading={reset.isPending}
-            onClick={() => reset.mutate(undefined, { onSuccess: () => toast('Demo data reset'), onError: fail('reset') })}>
-            Reset
-          </Button>
+          <span className="mr-1 hidden text-eyebrow text-text-subtle xl:inline">Demo controls</span>
           <Button size="sm" icon={<CalendarPlus strokeWidth={1.75} />} loading={advance.isPending}
             onClick={() => advance.mutate({ motherId: mother.id, days: 1 }, { onError: fail('advance the day') })}>
             Advance day
           </Button>
           <Button size="sm" icon={<FileText strokeWidth={1.75} />} onClick={() => startCall('onboarding')}>
-            Start onboarding call
+            Onboarding call
           </Button>
           <Button size="sm" variant="primary" icon={<PhoneCall strokeWidth={1.75} />} loading={call.isPending} onClick={() => startCall('checkin')}>
             Start check-in call
@@ -53,9 +50,14 @@ export function DemoControls({ mother, asha, audit, hidden }: DemoControlsProps)
           <Button size="sm" icon={<Send strokeWidth={1.75} />} onClick={() => setInjectOpen(true)}>
             Inject transcript
           </Button>
-          <span className="ml-2 inline-flex items-center gap-1 text-caption text-text-subtle">
+          <span aria-hidden className="mx-1 h-5 w-px bg-border" />
+          <Button size="sm" variant="ghost" icon={<RotateCcw strokeWidth={1.75} />} loading={reset.isPending}
+            onClick={() => reset.mutate(undefined, { onSuccess: () => toast('Demo data reset'), onError: fail('reset') })}>
+            Reset
+          </Button>
+          <span className="ml-1 hidden items-center gap-1 text-caption font-normal text-text-subtle md:inline-flex">
             <EyeOff className="size-3.5" strokeWidth={1.75} aria-hidden />
-            Hide <Kbd>H</Kbd>
+            <Kbd>H</Kbd>
           </span>
         </div>
       )}

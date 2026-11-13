@@ -1,29 +1,34 @@
+/*
+ * Jodi design tokens (editorial refinement).
+ * Paper-white surfaces, ink text, one muted ink-indigo brand colour.
+ * Red / amber / green are reserved for clinical status.
+ */
 :root {
-  --bg: #fafaf9;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface-muted: #f5f5f4;
-  --border: #e7e5e4;
-  --border-strong: #d6d3d1;
-  --text: #1c1917;
-  --text-muted: #57534e;
-  --text-subtle: #a8a29e;
-  --brand: #3730a3;
-  --brand-soft: #eef2ff;
-  --focus: #6366f1;
+  --surface-muted: #f2f1ed;
+  --border: #e6e3dd;
+  --border-strong: #d3cfc7;
+  --text: #1a1917;
+  --text-muted: #57534d;
+  --text-subtle: #78736b;
+  --brand: #343a8c;
+  --brand-soft: #eef0f8;
+  --focus: #5b63d3;
 
-  --red-fg: #b91c1c;
-  --red-bg: #fef2f2;
-  --red-border: #fecaca;
-  --amber-fg: #b45309;
-  --amber-bg: #fffbeb;
-  --amber-border: #fde68a;
-  --green-fg: #15803d;
-  --green-bg: #f0fdf4;
-  --green-border: #bbf7d0;
-  --info-fg: #1d4ed8;
-  --info-bg: #eff6ff;
+  --red-fg: #b42318;
+  --red-bg: #fdf3f2;
+  --red-border: #f2c6c1;
+  --amber-fg: #9a5b06;
+  --amber-bg: #fdf6ea;
+  --amber-border: #efd9b0;
+  --green-fg: #2b7448;
+  --green-bg: #f0f7f2;
+  --green-border: #c9e3d2;
+  --info-fg: #2d5591;
+  --info-bg: #eff3f9;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 12px;
 }

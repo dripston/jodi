@@ -18,7 +18,7 @@ export function StatusByDayChart() {
     <Card>
       <CardHeader
         title="Mothers by status"
-        description="By day since delivery, 0 to 42"
+        description="Families by day since delivery, 0 to 42. Days 0 to 7 carry the most risk."
         actions={
           <div className="flex items-center gap-4">
             {SERIES.map((s) => (
@@ -43,10 +43,10 @@ export function StatusByDayChart() {
               <Tooltip
                 cursor={{ fill: 'var(--surface-muted)' }}
                 labelFormatter={(d) => `Day ${String(d)}`}
-                contentStyle={{ border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+                contentStyle={{ border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
               />
               {SERIES.map((s, i) => (
-                <Bar key={s.key} dataKey={s.key} name={LEVEL_LABELS[s.key]} stackId="a" fill={s.color} radius={i === 2 ? [2, 2, 0, 0] : 0} isAnimationActive={false} />
+                <Bar key={s.key} dataKey={s.key} name={LEVEL_LABELS[s.key]} stackId="a" fill={s.color} fillOpacity={s.key === 'green' ? 0.55 : 1} radius={i === 2 ? [2, 2, 0, 0] : 0} isAnimationActive={false} />
               ))}
             </BarChart>
           </ResponsiveContainer>

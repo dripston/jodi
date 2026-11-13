@@ -21,7 +21,7 @@ export function Drawer({ open, onOpenChange, title, description, children, foote
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay data-[state=open]:animate-fade-in" />
         <DialogPrimitive.Content
           className={cn(
-            'fixed inset-y-0 right-0 z-50 flex w-full max-w-drawer flex-col rounded-l-lg border-l border-border bg-surface shadow-overlay focus-visible:outline-none data-[state=open]:animate-slide-in-right',
+            'fixed inset-y-0 right-0 z-50 flex w-full flex-col sm:w-drawer rounded-l-lg border-l border-border bg-surface shadow-overlay focus-visible:outline-none data-[state=open]:animate-slide-in-right',
             className,
           )}
         >

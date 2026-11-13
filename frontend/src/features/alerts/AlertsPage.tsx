@@ -16,7 +16,7 @@ export function AlertsPage() {
   const mothers = useMotherIndex();
   return (
     <>
-      <PageHeader title="Alerts" description="Every alert stays open until a person confirms the mother or baby was reached." />
+      <PageHeader title="Alerts" description="Every alert stays open until a person confirms the mother or baby was reached. Saying she is fine never closes one." />
       <Tabs defaultValue="open">
         <TabsList>
           {TABS.map((t) => {
@@ -30,7 +30,7 @@ export function AlertsPage() {
           })}
         </TabsList>
         {TABS.map((t) => (
-          <TabsContent key={t.value} value={t.value} className="max-w-content">
+          <TabsContent key={t.value} value={t.value} className="max-w-4xl">
             <AlertList
               tickets={data?.filter((x) => t.states.includes(x.state))}
               mothers={mothers}
@@ -39,6 +39,7 @@ export function AlertsPage() {
               onRetry={() => void refetch()}
               emptyTitle={t.empty[0]}
               emptyDescription={t.empty[1]}
+              grouped={t.value !== 'closed'}
             />
           </TabsContent>
         ))}
