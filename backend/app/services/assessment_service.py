@@ -28,6 +28,7 @@ from app.domain.labels import DEFAULT_CLARIFY, clarify_question
 from app.domain.rules import AssessmentInput, Profile
 from app.domain.script_choice import choose_scripts
 from app.domain.scripts import ScriptBook
+from app.domain.transcript import spoken_language
 from app.integrations.registry import get_integrations
 from app.integrations.sarvam_llm import ExtractionError
 from app.repositories import mothers as mrepo
@@ -201,7 +202,8 @@ async def assess_transcript(
     if purpose == "family_alert" and not script_ids and ticket is not None and "FAMILY-ALERT" not in already:
         script_ids, level = ["FAMILY-ALERT"], ticket.level
 
-    lang = language or (mother.language if mother else "kn")
+    # What the caller actually spoke beats the (possibly stale) language variable Sarvam sends.
+    lang = spoken_language(transcript) or language or (mother.language if mother else "kn")
     say = render_scripts(script_ids, lang, mother.name if mother else None, _facility_name(s, mother, a))
     transfer = _transfer_to(s, mother, level, caller_phone, purpose, live)
     clarify = None

@@ -119,3 +119,13 @@ def test_rules_for_fact():
     assert rules_for_fact("mother", "clots_large", fired) == ["M-BLEED-01"]
     assert rules_for_fact("baby", "feeding_poor", fired) == ["B-FEED-02", "D-INF-01"]
     assert rules_for_fact("baby", "fits", fired) == [] and rules_for_fact("mother", None, fired) == []
+
+
+def test_spoken_language_from_script():
+    from app.domain.transcript import spoken_language
+
+    assert spoken_language("User: मेरे बच्चे को सांस लेने में तकलीफ है") == "hi"
+    assert spoken_language("User: ಒಂದು ಗಂಟೆಯಲ್ಲಿ ಬಟ್ಟೆ ಒದ್ದೆಯಾಗಿದೆ") == "kn"
+    assert spoken_language("User: ondu ghante alli batte odde aaytu") is None  # romanised: keep call language
+    # latest caller turn wins; Jodi's own Kannada line is ignored
+    assert spoken_language("User: ನಮಸ್ಕಾರ\nAgent: ನಮಸ್ಕಾರ ನಾನು ಜೋಡಿ\nUser: मुझे हिंदी आती है") == "hi"

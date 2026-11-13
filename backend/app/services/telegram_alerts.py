@@ -45,10 +45,12 @@ def next_call_text(s: Session, mother: Mother) -> str:
     return f"{day}{local.day} {local.strftime('%b')} around {local.strftime('%H:%M')}"
 
 
-async def notify_ticket(s: Session, t: Ticket, mother: Mother, now: datetime, event: str = "open") -> int:
+async def notify_ticket(s: Session, t: Ticket, mother: Mother, now: datetime, event: str = "open",
+                        new_signs: tuple[str, ...] = ()) -> int:  # fmt: skip
     """Alert all active family links + the mother's link. event: open | raised | reminder.
 
-    Dedupe: one alert per ticket per level; one reminder per escalation step. Never raises.
+    Dedupe: one alert per ticket per level (plus one per new red sign, `new_signs`); one reminder
+    per escalation step. Never raises.
     """
     if not tg.enabled():
         return 0
@@ -63,7 +65,7 @@ async def notify_ticket(s: Session, t: Ticket, mother: Mother, now: datetime, ev
         else:
             text, key = (
                 messages.alert_text(t.level, list(t.subjects), mother.language, **values),
-                f"alert:{t.id}:{t.level}",
+                f"alert:{t.id}:{t.level}" + (":" + "+".join(sorted(new_signs)) if new_signs else ""),
             )
         sent = 0
         for link in tg.active_links(s, mother.id):

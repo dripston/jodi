@@ -58,3 +58,24 @@ def split_turns(transcript: str) -> list[tuple[str, str]]:
 def caller_text(transcript: str) -> str:
     """Only the caller's words (all text if there are no speaker labels)."""
     return "\n".join(t for role, t in split_turns(transcript) if role not in AGENT_ROLES).strip()
+
+
+def _script_counts(text: str) -> tuple[int, int]:
+    deva = sum(1 for ch in text if "ऀ" <= ch <= "ॿ")
+    kann = sum(1 for ch in text if "ಀ" <= ch <= "೿")
+    return deva, kann
+
+
+def spoken_language(transcript: str) -> str | None:
+    """Language of the caller's latest words, from the script the speech-to-text wrote them in:
+    Devanagari → "hi", Kannada script → "kn". Romanised or mixed/unclear text → None (keep the
+    call's language). Lets a mid-call switch to Hindi get the Hindi script even if Sarvam's
+    `language` variable still says Kannada."""
+    turns = [t for role, t in split_turns(transcript) if role not in AGENT_ROLES and t.strip()]
+    for text in reversed(turns[-3:]):
+        deva, kann = _script_counts(text)
+        if deva >= 3 and deva > 2 * kann:
+            return "hi"
+        if kann >= 3 and kann > 2 * deva:
+            return "kn"
+    return None

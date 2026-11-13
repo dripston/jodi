@@ -386,3 +386,27 @@ def test_amber_does_not_phone_the_family(client, monkeypatch):
     r = assess(client, "User: 4 pads soaked since morning", "int_amber")
     assert r["level"] == "amber"
     assert not any(p[1] == "family_alert" for p in placed[n:])
+
+
+def test_hindi_speech_gets_hindi_script_even_if_language_variable_says_kannada(client):
+    r = assess(client, "User: एक घंटे में पूरा पैड भीग गया, pad soaked within an hour", "int_hi", language="kn")
+    assert r["level"] == "red"
+    assert (
+        r["say_verbatim"] == script_book().render("RED-BLEED", "hi", "Lakshmi", "Bengaluru District Hospital (demo)")[0]
+    )
+
+
+def test_new_red_sign_on_open_ticket_alerts_family_again(client, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "family_contact", "call")
+    placed = get_integrations().call_placer.placed
+    n = len(placed)
+    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m")  # mother red → ticket + call
+    assess(client, "User: ondu ghante alli batte poora odde aaytu", "int_m")  # same sign again → quiet
+    assert sum(p[1] == "family_alert" for p in placed[n:]) == 1
+    r = assess(client, "User: maguvige usiru bega bartide", "int_b")  # baby red while ticket open → new alert
+    assert r["level"] == "red"
+    assert sum(p[1] == "family_alert" for p in placed[n:]) == 2
+    lak = next(x for x in client.get("/api/tickets?state=open").json() if x["mother_id"] == "m_001")
+    assert any("new danger sign" in h["note"] for h in lak["history"])

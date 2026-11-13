@@ -75,12 +75,9 @@ async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, li
                created_at=now, next_escalation_at=escalation.escalation_due_at(a.overall_level, now))  # fmt: skip
     s.add(t)
     add_event(s, t, "open", now, note=a.reason_text)
-    chain = escalation.escalation_chain(
-        [(f.phone, f.decision_maker) for f in mrepo.family_of(s, mother.id)], mother.asha_id
-    )
     # Only red phones the family straight away; amber goes to Telegram + the ASHA visit task
     # (an unacknowledged amber ticket still escalates to the family later, see escalation_tick).
-    first_family = next((c for c in chain if c.startswith("+")), None) if t.level == "red" else None
+    first_family = _first_family(s, mother) if t.level == "red" else None
     if mother.asha_id:
         await _notify_contact(s, t, mother, f"asha:{mother.asha_id}", now, live)
     escalation.check_transition("open", "notified")
@@ -94,24 +91,31 @@ async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, li
     return t
 
 
+def _first_family(s: Session, mother: Mother) -> str | None:
+    chain = escalation.escalation_chain(
+        [(f.phone, f.decision_maker) for f in mrepo.family_of(s, mother.id)], mother.asha_id
+    )
+    return next((c for c in chain if c.startswith("+")), None)
+
+
 async def _contact_family(s: Session, t: Ticket, mother: Mother, contact: str | None, now: datetime,
-                          live: bool) -> None:  # fmt: skip
+                          live: bool, new_signs: tuple[str, ...] = ()) -> None:  # fmt: skip
     """Phone call (or transfer note) first; Telegram is extra and always comes after it."""
     if contact:
         await _notify_contact(s, t, mother, contact, now, live)
         s.commit()
-    await telegram_alerts.notify_ticket(s, t, mother, now, "open")
+    await telegram_alerts.notify_ticket(s, t, mother, now, "open", new_signs=new_signs)
     s.commit()
 
 
 async def _contact_family_then_telegram(ticket_id: str, mother_id: str, contact: str | None, now: datetime,
-                                        live: bool) -> None:  # fmt: skip
+                                        live: bool, new_signs: tuple[str, ...] = ()) -> None:  # fmt: skip
     """Background version (own DB session): failures are logged, never raised."""
     try:
         with new_session() as s:
             t, mother = s.get(Ticket, ticket_id), mrepo.get_mother(s, mother_id)
             if t is not None:
-                await _contact_family(s, t, mother, contact, now, live)
+                await _contact_family(s, t, mother, contact, now, live, new_signs)
     except Exception as exc:  # noqa: BLE001 - a background job must never crash the app
         log(logger, "family contact failed", logging.ERROR, ticket_id=ticket_id, error=type(exc).__name__)
 
@@ -128,6 +132,19 @@ def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> bool:
         t.next_escalation_at = escalation.next_escalation_after_update(t.next_escalation_at, t.level, now)
         add_event(s, t, t.state, now, note=f"raised to {t.level}")
     return raised
+
+
+async def _realert(s: Session, t: Ticket, mother: Mother, new_red: tuple[str, ...], now: datetime,
+                   live: bool) -> None:  # fmt: skip
+    add_event(s, t, t.state, now, note=f"new danger sign: {', '.join(new_red)}")
+    if mother.asha_id:
+        await _notify_contact(s, t, mother, f"asha:{mother.asha_id}", now, live)
+    s.commit()
+    contact = _first_family(s, mother)
+    job = partial(_contact_family_then_telegram, t.id, mother.id, contact, now, live, new_red)
+    if not deferred.defer(job):
+        await _contact_family(s, t, mother, contact, now, live, new_red)
+    log(logger, "ticket re-alerted", ticket_id=t.id, new_signs=list(new_red))
 
 
 async def _telegram_raised(ticket_id: str, mother_id: str, now: datetime) -> None:
@@ -162,10 +179,17 @@ async def apply_assessment(s: Session, mother: Mother, a: RuleAssessment, now: d
         if t is None or (t.state == "reached" and a.overall_level == "red"):
             t = await _open(s, mother, a, now, live)
         else:
+            # A red sign not yet on this ticket (e.g. the baby now, after the mother earlier) is a new
+            # emergency: alert the family and ASHA again. The same sign again stays quiet (deduped).
+            new_red = tuple(
+                dict.fromkeys(r.rule_id for r in a.fired if r.level == "red" and r.rule_id not in t.rule_ids)
+            )
             raised = _update(s, t, a, now)
             if a.dismissed_by_family:
                 mark_dismissed(s, t, now)
-            if raised:
+            if new_red:
+                await _realert(s, t, mother, new_red, now, live)
+            elif raised:
                 s.commit()
                 job = partial(_telegram_raised, t.id, mother.id, now)
                 if not deferred.defer(job):

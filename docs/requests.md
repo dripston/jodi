@@ -57,3 +57,9 @@ Format (append at the bottom, newest last):
 - Why: `/alerts` has Open / Acknowledged / Closed tabs and the sidebar badge counts open + notified tickets. The frontend mock uses this behaviour.
 - Contract impact: none (clarification of docs/contracts.md §6)
 - Status: done (confirmed): `state=open` returns every ticket that is not `closed` (open, notified, acknowledged, reached); no `state` returns all tickets including closed; any other value filters on that exact state.
+
+## [2026-11-13 23:20] from backend to clinical content owner
+- What: Sign-specific first-aid lines for the red scripts, at least for a baby with fast/difficult breathing (B-BREATH-01/02), and for baby fits (RED-FITS-BABY is still cut off with "…"). Today RED-BABY only says see a doctor now, call 108, go to {facility}, keep the baby warm and close.
+- Why: In a live test a mother reported her baby's breathing trouble and heard only "go to hospital" with no guidance on what to do on the way. The backend can serve one script per rule group; it will not invent clinical text.
+- Contract impact: none (new script ids in docs/red-scripts.md; backend maps rule → script)
+- Status: open
