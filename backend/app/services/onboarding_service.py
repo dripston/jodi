@@ -256,8 +256,9 @@ async def apply_onboarding(s: Session, p: PendingUpdate, now: datetime, consent_
         note = f"Consent recorded via Telegram by {by}"
     else:
         note = f"Registered on the {channel} by the {by}; her own spoken consent is asked on her first call"
-    record_service.append_entry(s, mother, subject="mother", kind="note", source="system", now=now,
-                                value=note, source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
+    if not any(e.kind == "note" and e.value == note for e in rrepo.entries_in_order(s, mother.id)):  # re-saves add nothing
+        record_service.append_entry(s, mother, subject="mother", kind="note", source="system", now=now,
+                                    value=note, source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
     call_service.plan_milestones(s, mother, now)
     refresh_status(s, mother)
     return ids
