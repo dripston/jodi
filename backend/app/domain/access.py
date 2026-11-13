@@ -69,3 +69,21 @@ def detect_doctor(transcript: str) -> tuple[bool, str | None]:
         if m.group("name").lower() not in _NOT_NAMES:
             return True, m.group("name").title()
     return bool(_DOCTOR_WORD.search(transcript)), None
+
+
+def normalize_phone(raw: str) -> str:
+    """Indian numbers to +91XXXXXXXXXX ("7019142715", "917019142715", "07019142715", "+91 70191-42715").
+
+    Anything that is not a plain phone number (e.g. a browser-test user id) is returned unchanged.
+    """
+    s = raw.strip()
+    digits = "".join(ch for ch in s if ch.isdigit())
+    if not s or any(ch.isalpha() for ch in s):
+        return s
+    if len(digits) == 10:
+        return "+91" + digits
+    if len(digits) == 11 and digits.startswith("0"):
+        return "+91" + digits[1:]
+    if len(digits) == 12 and digits.startswith("91"):
+        return "+" + digits
+    return ("+" + digits) if s.startswith("+") else s

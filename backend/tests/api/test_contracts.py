@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from sqlmodel import select
 
 from app.db.models import Entry
@@ -129,3 +130,11 @@ def test_null_caller_phone_is_an_unknown_caller(client):
     r = client.post("/tools/onboarding-save", headers=AUTH, json={"phone": None, "transcript": "User: naanu Asha"})
     assert r.status_code == 200 and r.json()["pending_id"] is None
     assert len(client.get("/api/mothers").json()) == len(before)  # no phoneless mother created
+
+
+@pytest.mark.parametrize("raw", ["917019142715", "07019142715", "7019142715", "+91 70191-42715"])
+def test_caller_phone_formats_are_normalised(raw):
+    from app.schemas.api import AssessRiskIn
+
+    assert AssessRiskIn(phone=raw, interaction_id="i").phone == "+917019142715"
+    assert AssessRiskIn(phone="c150c4d0b39d", interaction_id="i").phone == "c150c4d0b39d"  # browser-test id

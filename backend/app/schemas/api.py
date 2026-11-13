@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.domain.access import normalize_phone
+
 Level = Literal["green", "amber", "red"]
 
 
@@ -27,10 +29,18 @@ class Lenient(BaseModel):
     @field_validator("phone", "caller_phone", "mother_phone", mode="before", check_fields=False)
     @classmethod
     def _phone(cls, v: Any) -> Any:
-        """Dashboard 'Send' tests send User identifier = null: treat as an unknown caller."""
+        """Dashboard 'Send' tests send User identifier = null: treat as an unknown caller.
+        Telephony may send 917019142715 / 07019142715: normalise to +91…"""
         if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
             return ""
-        return v
+        return normalize_phone(str(v))
+
+    @field_validator("about_mother_phone", mode="before", check_fields=False)
+    @classmethod
+    def _about(cls, v: Any) -> Any:
+        if v is None or str(v).strip() in ("", "null") or str(v).startswith("@"):
+            return None
+        return normalize_phone(str(v))
 
 
 # ------------------------------------------------------------------ core models
