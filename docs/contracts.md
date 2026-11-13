@@ -276,6 +276,22 @@ Backend triggers single calls via Sarvam **Instant Outbound** (`https://apps.sar
 
 Polling: frontend polls `/api/mothers`, `/api/tickets?state=open` and the active timeline every 2 seconds. CORS allows `http://localhost:5173`.
 
+### 6.1 Dashboard read endpoints (added for the design-system pages; additive)
+
+| Method | Path | Purpose | Response |
+|---|---|---|---|
+| GET | `/api/stats` | Overview KPIs | `{ "mothers_enrolled": 128, "active_dyads": 96, "open_alerts": {"red": 2, "amber": 7}, "median_minutes_to_contact": 6.5, "asha_visit_within_24h_pct": 81.0, "calls_today": {"scheduled": 40, "completed": 31, "missed": 5}, "asha_tasks_open": 9 }` |
+| GET | `/api/stats/status-by-day` | stacked bar data | `[{ "day": 0, "green": 4, "amber": 1, "red": 0 }, …]` for days 0–42 |
+| GET | `/api/mothers?status=red&asha_id=a_001&high_risk=true&q=lak&day_min=0&day_max=10` | filtered list (all params optional) | `Mother[]` with embedded `"baby": Baby`, `"last_checkin_at"`, `"next_call_at"` |
+| GET | `/api/mothers/{id}/vitals` | chart series | `{ "bp": [{"at", "systolic", "diastolic", "source"}], "baby_weight": [{"at", "grams", "source"}], "breaths_per_minute": [{"at", "value", "source"}] }` |
+| GET | `/api/mothers/{id}/summary` | exact text Jodi reads to a doctor | `{ "summary_text": "…" }` |
+| GET | `/api/mothers/{id}/calls` | calls for one mother | `CallLog[]` |
+| GET | `/api/calls/{interaction_id}` | call detail | `{ "call": CallLog, "transcript": "…", "facts": Fact[], "rule_ids": [] }` |
+| GET | `/api/ashas` | ASHA list | `Asha[]` with `"open_tasks": 3` |
+
+`CallLog` = `{ "interaction_id", "mother_id", "purpose": CallPurpose, "direction": "inbound" | "outbound", "started_at", "duration_seconds", "answered": bool, "outcome": "completed" | "red_flag" | "amber_flag" | "no_answer" | "wrong_person", "summary": "…" }`.
+`Fact` = one item of the extraction schema in §3.
+
 ### Onboarding photo `fields` shape
 ```json
 {

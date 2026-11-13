@@ -12,7 +12,7 @@ This README is the **shared brief for every human and every coding agent** worki
 
 After delivery, Indian mothers are sent home within a day or two. The next six weeks are when mothers and newborns are most at risk, yet nobody is responsible for them between discharge and day 42. Premium hospitals follow up only their own patients, small hospitals say "come back if there's an emergency", and government programmes are periodic (ASHA visits) or one-way (Kilkari).
 
-**Jodi** is an independent service that a family subscribes to (or that NHM/CSR sponsors). It works on **any phone, including keypad phones**, in the family's language (Kannada first, then Hindi and English).
+**Jodi** is an independent service whose **primary customer and payer is the government** (district/state health departments through NHM, with CSR funding the first pilot). It is offered to every registered pregnancy through ASHAs/ANMs, so it follows the mother wherever she delivers. It is never paid by hospitals. It works on **any phone, including keypad phones**, in the family's language (Kannada first, then Hindi and English).
 
 1. **Onboarding call** builds a health record for mother and baby (and optionally reads a photo of the paper discharge slip).
 2. **Adaptive voice check-ins:** Jodi calls on clinical milestones *and* when risk rises.
@@ -107,8 +107,8 @@ We all commit to `main`. Folder ownership prevents most conflicts; the rules bel
 
 | Layer | Choice |
 |---|---|
-| Backend | Python 3.11+, FastAPI, Uvicorn, SQLite via SQLModel, APScheduler, `httpx`, `sarvamai` SDK, `pytest` |
-| Frontend | React 18 + Vite + TypeScript, Tailwind CSS, plain `fetch` with polling every 2 s |
+| Backend | Python 3.11+, FastAPI, Pydantic v2, SQLModel/SQLAlchemy 2.0 (SQLite), pydantic-settings, APScheduler, `httpx`, `sarvamai` SDK, `pytest`, `ruff`. Layered: api → services → domain (pure) / repositories / integrations (with mocks) |
+| Frontend | React 18 + Vite + TypeScript (strict), Tailwind with design tokens, shadcn/ui (Radix), lucide-react, TanStack Query (2 s polling), zod, recharts. See `docs/design-system.md` |
 | Voice | Sarvam Voice Agents (configured in the Sarvam dashboard; prompts and tool configs are versioned in `voice/`) |
 | AI models | Sarvam-105B (Structured Outputs, `json_schema` strict) for extraction · Sarvam Document AI (Extract) for discharge slips · Saaras for speech-to-text · **Bulbul v4** for voice (v3 was retired from Voice Agents on 10 Nov 2026) |
 | Tunnel | ngrok, so Sarvam can reach the backend on a laptop |
@@ -125,6 +125,7 @@ SARVAM_FROM_NUMBER=        # Sarvam-rented or BYO telephony number
 PUBLIC_BASE_URL=           # ngrok https URL of the backend
 TOOL_SHARED_SECRET=        # bearer token Sarvam tools send to our backend
 DEMO_MODE=true
+SARVAM_MOCK=false        # true = run fully offline with deterministic mocks
 VITE_API_BASE=http://localhost:8000
 ```
 
@@ -177,6 +178,7 @@ Full script in [`docs/demo-script.md`](docs/demo-script.md). The five moments th
 - [`agents/backend.md`](agents/backend.md): backend agent brief
 - [`agents/frontend.md`](agents/frontend.md): frontend agent brief
 - [`agents/voice.md`](agents/voice.md): voice agent brief
+- [`docs/design-system.md`](docs/design-system.md): UI design system and page specs (frontend must follow)
 - [`docs/contracts.md`](docs/contracts.md): APIs and data shapes (source of truth)
 - [`docs/clinical-rules.md`](docs/clinical-rules.md): danger-sign rules (draft)
 - [`docs/phrase-lexicon.md`](docs/phrase-lexicon.md): everyday phrases to clinical codes
