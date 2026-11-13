@@ -19,6 +19,7 @@ from app.domain.rules import Assessment as RuleAssessment
 from app.domain.rules import level_rank, max_level
 from app.repositories import mothers as mrepo
 from app.repositories import records as rrepo
+from app.services import telegram_alerts
 from app.services.ids import new_id
 
 logger = logging.getLogger(__name__)
@@ -82,10 +83,13 @@ async def _open(s: Session, mother: Mother, a: RuleAssessment, now: datetime, li
     t.state = "notified"
     add_event(s, t, "notified", now)
     log(logger, "ticket opened", ticket_id=t.id, risk_level=t.level, rule_ids=t.rule_ids)
+    # Telegram is extra, sent only after the phone call / transfer / ASHA alert above.
+    await telegram_alerts.notify_ticket(s, t, mother, now, "open")
     return t
 
 
-def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> None:
+def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> bool:
+    """Merge a new assessment into the ticket (never lowers). Returns True if the level rose."""
     raised = level_rank(a.overall_level) > level_rank(t.level)
     t.level = max_level(t.level, a.overall_level)
     t.rule_ids = list(dict.fromkeys([*t.rule_ids, *a.rule_ids]))
@@ -95,6 +99,7 @@ def _update(s: Session, t: Ticket, a: RuleAssessment, now: datetime) -> None:
     if raised and t.state in ("open", "notified"):
         t.next_escalation_at = escalation.next_escalation_after_update(t.next_escalation_at, t.level, now)
         add_event(s, t, t.state, now, note=f"raised to {t.level}")
+    return raised
 
 
 def mark_dismissed(s: Session, t: Ticket, now: datetime, by: str = "family") -> None:
@@ -118,9 +123,12 @@ async def apply_assessment(s: Session, mother: Mother, a: RuleAssessment, now: d
         if t is None or (t.state == "reached" and a.overall_level == "red"):
             t = await _open(s, mother, a, now, live)
         else:
-            _update(s, t, a, now)
+            raised = _update(s, t, a, now)
             if a.dismissed_by_family:
                 mark_dismissed(s, t, now)
+            if raised:
+                s.commit()
+                await telegram_alerts.notify_ticket(s, t, mother, now, "raised")
     if a.asha_task:
         _asha_task(s, mother, "2 calls unanswered: please visit", now, t.id if t else None)
     s.commit()
@@ -172,6 +180,8 @@ async def escalation_tick(s: Session, now: datetime) -> int:
             await _notify_contact(s, t, mother, contact, now, live=False)
             add_event(s, t, t.state, now, note=f"escalated: no ack within {escalation.ESCALATION_MINUTES[t.level]} min")
             t.next_escalation_at = escalation.escalation_due_at(t.level, now)
+            s.commit()
+            await telegram_alerts.notify_ticket(s, t, mother, now, "reminder")
         count += 1
     s.commit()
     return count

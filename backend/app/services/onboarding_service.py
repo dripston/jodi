@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
+from app.core.config import get_settings
 from app.core.errors import DomainError, NotFound
 from app.core.logging import log
 from app.core.time import ist_today
@@ -17,6 +18,7 @@ from app.domain.updates import describe_medicine, onboarding_readback
 from app.integrations.registry import get_integrations
 from app.integrations.sarvam_llm import ExtractionError
 from app.repositories import mothers as mrepo
+from app.repositories import records as rrepo
 from app.schemas.api import OnboardingSaveIn, PendingOut, PhotoOut
 from app.services import call_service, record_service
 from app.services.ids import new_id
@@ -80,7 +82,7 @@ async def poll_photo(s: Session, job_id: str, now: datetime) -> PhotoOut:
         return _photo_out(job)
     if st.status == "done":
         fields = dict(st.fields or {})
-        if not fields.get("delivery_date"):
+        if not fields.get("delivery_date") and get_settings().sarvam_mock:  # mock slip only; never invent real data
             mother = mrepo.get_mother(s, job.mother_id or "")
             fields["delivery_date"] = (mother.delivery_date or ist_today(now) - timedelta(days=1)).isoformat()
         fields["medicines"] = normalize_medicines(fields.get("medicines"))
@@ -150,9 +152,12 @@ def _apply_profile(s: Session, mother: Mother, f: dict[str, Any]) -> None:
 def _onboarding_entries(s: Session, mother: Mother, p: PendingUpdate, f: dict[str, Any], now: datetime) -> list[str]:
     src = p.payload.get("sources", {})
     ids = []
+    already = {(e.kind, e.value) for e in rrepo.entries_in_order(s, mother.id)}
 
     def add(key: str, subject: str, kind: str, value: str, num: float | None = None, unit: str | None = None,
             code: str | None = None) -> None:  # fmt: skip
+        if (kind, value) in already:  # re-confirming the same detail (e.g. voice after Telegram) adds nothing
+            return
         e = record_service.append_entry(s, mother, subject=subject, kind=kind, source=src.get(key, "mother_reported"),
                                         now=now, code=code, value=value, numeric_value=num, unit=unit,
                                         source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
@@ -176,17 +181,22 @@ def _onboarding_entries(s: Session, mother: Mother, p: PendingUpdate, f: dict[st
     return ids
 
 
-async def apply_onboarding(s: Session, p: PendingUpdate, now: datetime) -> list[str]:
+async def apply_onboarding(s: Session, p: PendingUpdate, now: datetime, consent_by: str | None = None) -> list[str]:
+    """Apply confirmed onboarding fields. `consent_by` (e.g. "telegram:family") records consent given
+    in another channel; the mother's own spoken consent is then still asked on her first call
+    (consent_at stays empty until she gives it)."""
     mother = mrepo.get_mother(s, p.mother_id or "")
     f = dict(p.payload.get("fields", {}))
     _apply_profile(s, mother, f)
-    mother.consent_at = now  # spoken consent is part of the confirmed read-back
+    if consent_by is None:
+        mother.consent_at = now  # spoken consent is part of the confirmed read-back
     mother.onboarded_at = mother.onboarded_at or now
     s.commit()
     ids = _onboarding_entries(s, mother, p, f, now)
+    note = (f"Consent recorded via Telegram by {consent_by.split(':')[-1]}" if consent_by
+            else "Spoken consent recorded on onboarding call")  # fmt: skip
     record_service.append_entry(s, mother, subject="mother", kind="note", source="system", now=now,
-                                value="Spoken consent recorded on onboarding call", source_phone=p.caller_phone,
-                                interaction_id=p.interaction_id)  # fmt: skip
+                                value=note, source_phone=p.caller_phone, interaction_id=p.interaction_id)  # fmt: skip
     call_service.plan_milestones(s, mother, now)
     refresh_status(s, mother)
     return ids

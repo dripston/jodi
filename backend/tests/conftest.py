@@ -10,6 +10,11 @@ os.environ.update({
     "SCHEDULER_ENABLED": "false",
     "SEED_ON_STARTUP": "false",
     "SARVAM_API_KEY": "",
+    "TELEGRAM_ENABLED": "true",
+    "TELEGRAM_MOCK": "true",
+    "TELEGRAM_MODE": "webhook",  # the polling loop is tested on its own
+    "TELEGRAM_WEBHOOK_SECRET": "tg-secret",
+    "TELEGRAM_BOT_TOKEN": "",
 })  # fmt: skip
 
 from datetime import UTC, datetime, timedelta  # noqa: E402

@@ -404,3 +404,13 @@ class VitalsOut(BaseModel):
 
 class SummaryOut(BaseModel):
     summary_text: str
+
+
+class OutboundMessageOut(BaseModel):
+    id: str
+    kind: str
+    chat_role: str
+    text: str
+    sent_at: str | None
+    delivered: bool
+    ticket_id: str | None

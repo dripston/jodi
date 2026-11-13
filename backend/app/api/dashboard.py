@@ -23,6 +23,7 @@ from app.schemas.api import (
     FactOut,
     MotherDetail,
     MotherOut,
+    OutboundMessageOut,
     RecentCall,
     StatsOut,
     StatusByDay,
@@ -102,6 +103,17 @@ def summary(mother_id: str, s: Session = Depends(get_session), t: datetime = Dep
 def mother_calls(mother_id: str, s: Session = Depends(get_session)) -> list[CallLogOut]:
     mrepo.get_mother(s, mother_id)
     return [call_out(c) for c in rrepo.recent_calls(s, 200, mother_id)]
+
+
+@router.get("/mothers/{mother_id}/messages", response_model=list[OutboundMessageOut])
+def mother_messages(mother_id: str, s: Session = Depends(get_session)) -> list[OutboundMessageOut]:
+    """Telegram messages sent about this mother (e.g. "Telegram sent to husband ✓")."""
+    from app.core.time import iso
+    from app.services.telegram_send import messages_for
+
+    mrepo.get_mother(s, mother_id)
+    return [OutboundMessageOut(id=m.id, kind=m.kind, chat_role=m.chat_role, text=m.text, sent_at=iso(m.sent_at),
+                               delivered=m.delivered, ticket_id=m.ticket_id) for m in messages_for(s, mother_id)]  # fmt: skip
 
 
 @router.get("/tickets", response_model=list[TicketOut])

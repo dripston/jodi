@@ -83,7 +83,12 @@ def on_start(s: Session, body: OnStartIn, now: datetime) -> OnStartOut:
     ident = identify(s, phone)
     mother = mother_for_call(s, call, ident)
     role = call.caller_role if call.mother_id else ident.role
-    if call.mother_id:
+    awaiting_own_consent = (
+        mother is not None and role == "mother" and mother.onboarded_at is not None and mother.consent_at is None
+    )
+    if awaiting_own_consent:
+        purpose = "onboarding"  # registered by family on Telegram: her own spoken consent comes first
+    elif call.mother_id:
         purpose = call.purpose
     elif ident.role == "asha":
         purpose = "asha"
@@ -205,6 +210,10 @@ async def on_end(s: Session, body: OnEndIn, now: datetime) -> dict[str, object]:
                 maybe_family_ack(s, mother, body.transcript, phone, now, False, body.interaction_id)
         call.outcome = body.outcome() or _outcome(result)
         call.summary = _call_summary(mother, result, now)
+        if mother is not None and result is not None and result.level == "green" and call.purpose == "checkin":
+            from app.services import telegram_alerts
+
+            await telegram_alerts.notify_status_green(s, mother, now)
     out = {"ok": True, "level": result.level if result else None}
     s.add(ProcessedInteraction(interaction_id=body.interaction_id, kind="on_end", result=out, created_at=now))
     s.commit()

@@ -46,6 +46,7 @@ def is_high_risk(
         or any(c in HIGH_BP for c in complications)
         or (birth_weight_grams is not None and birth_weight_grams < 2500)
         or (gestation_weeks is not None and gestation_weeks < 37)
+        or "preterm_birth" in complications  # "born before 37 weeks" reported without a week count
     )
 
 
